@@ -113,16 +113,14 @@ lsblk
 # sda      32G   <- This might be your boot USB
 # sdb     4TB   <- Data drive 1
 # sdc     4TB   <- Data drive 2
-# sdd     16G   <- NixOS installer USB
-
-# Get stable disk IDs (IMPORTANT - write these down!):
-ls -la /dev/disk/by-id/ | grep -v part
+# sdd     16G   <- NixOS installer USB (you're booted from this)
 ```
 
-**IMPORTANT**: Note down:
-- Which device is your **boot USB** (where NixOS will be installed)
-- Which two devices are your **data drives** (for ZFS mirror)
-- The `/dev/disk/by-id/` paths for your data drives
+**Note down which `/dev/sdX` is which:**
+- Your **boot USB** (where NixOS will be installed) - e.g., `/dev/sda`
+- Your two **data drives** (for ZFS mirror) - e.g., `/dev/sdb` and `/dev/sdc`
+
+Don't worry about `/dev/disk/by-id/` paths - the scripts handle that automatically!
 
 **Step 4: Clone This Repository**
 
@@ -167,12 +165,15 @@ sudo ./scripts/prepare-usb.sh /dev/sdX   # Replace X with your boot drive letter
 **Step 7: Create the ZFS Pool**
 
 ```bash
-# Use the /dev/disk/by-id/ paths you noted in Step 3
-# Example (replace with YOUR disk IDs):
-sudo ./scripts/create-zfs-pool.sh \
-  /dev/disk/by-id/ata-WDC_WD40EFRX-68N32N0_WD-XXXXXXXX \
-  /dev/disk/by-id/ata-WDC_WD40EFRX-68N32N0_WD-YYYYYYYY \
-  tank
+# Just use the simple /dev/sdX names - the script automatically finds stable IDs!
+# Example: if your data drives are sdb and sdc:
+sudo ./scripts/create-zfs-pool.sh /dev/sdb /dev/sdc tank
+
+# The script will:
+# - Look up the stable /dev/disk/by-id/ paths automatically
+# - Show you the disk sizes and IDs for confirmation
+# - Create the pool and datasets
+# - Print the hostId and disk IDs to add to your config
 ```
 
 **Step 8: Mount Filesystems for Installation**
