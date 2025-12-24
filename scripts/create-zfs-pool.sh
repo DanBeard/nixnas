@@ -172,9 +172,29 @@ echo ""
 # Check for existing ZFS pools
 existing=$(zpool list -H -o name 2>/dev/null | grep "^${POOL_NAME}$" || true)
 if [ -n "$existing" ]; then
-    echo -e "${RED}Error: Pool '$POOL_NAME' already exists!${NC}"
-    echo "Use a different name or destroy the existing pool first."
-    exit 1
+    echo -e "${YELLOW}Pool '$POOL_NAME' already exists!${NC}"
+    echo ""
+    zpool status "$POOL_NAME"
+    echo ""
+    echo -e "${RED}WARNING: Destroying the pool will DELETE ALL DATA on it!${NC}"
+    read -p "Do you want to destroy the existing pool and recreate it? Type 'DESTROY' to confirm: " destroy_confirm
+
+    if [ "$destroy_confirm" != "DESTROY" ]; then
+        echo "Aborted."
+        exit 1
+    fi
+
+    echo ""
+    echo -e "${CYAN}Destroying existing pool '$POOL_NAME'...${NC}"
+
+    # Unmount all datasets first
+    zfs unmount -a -f 2>/dev/null || true
+
+    # Destroy the pool
+    zpool destroy -f "$POOL_NAME"
+
+    echo -e "${GREEN}Pool destroyed.${NC}"
+    echo ""
 fi
 
 # Confirm
