@@ -331,11 +331,11 @@ if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
 
     # Update dataDisks
     if grep -q 'CHANGE-ME-DISK1' "$CONFIG_FILE"; then
-        # Use perl for multi-line replacement (more reliable than sed)
-        perl -i -pe "
-            s|\"\/dev\/disk\/by-id\/CHANGE-ME-DISK1\"|\"$DISK1\"|g;
-            s|\"\/dev\/disk\/by-id\/CHANGE-ME-DISK2\"|\"$DISK2\"|g;
-        " "$CONFIG_FILE"
+        # Use sed for replacement (escape forward slashes in disk paths)
+        DISK1_ESCAPED=$(echo "$DISK1" | sed 's/\//\\\//g')
+        DISK2_ESCAPED=$(echo "$DISK2" | sed 's/\//\\\//g')
+        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK1\"/\"$DISK1_ESCAPED\"/g" "$CONFIG_FILE"
+        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK2\"/\"$DISK2_ESCAPED\"/g" "$CONFIG_FILE"
         echo -e "  ${GREEN}✓${NC} Updated dataDisks"
     elif grep -q "$DISK1" "$CONFIG_FILE"; then
         echo -e "  ${YELLOW}⚠${NC} dataDisks already configured, skipping"
