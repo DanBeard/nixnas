@@ -1,0 +1,149 @@
+# =============================================================================
+# NixNAS .gitignore - Safe for Public Repository
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SECRETS - CRITICAL
+# -----------------------------------------------------------------------------
+# The secrets.yaml file should ONLY be committed after encryption with SOPS
+# If you see plaintext passwords in secrets/secrets.yaml, DO NOT COMMIT
+
+# Private keys (NEVER commit these)
+*.key
+!*.pub                    # Public keys ARE safe
+*.pem
+*.p12
+*.pfx
+**/private-key
+**/private.key
+**/privatekey*
+**/*_private*
+**/*-private*
+
+# Age encryption keys
+**/keys.txt
+**/*.age.key
+**/age-key*
+
+# WireGuard keys (public keys are OK, private are not)
+**/wg-private*
+**/wireguard-private*
+
+# SSL/TLS
+*.crt.key
+*.key.pem
+
+# Unencrypted secrets - the actual secrets.yaml should be SOPS-encrypted
+# We commit secrets.yaml.template as a reference, but ignore unencrypted secrets.yaml
+secrets/secrets.yaml
+!secrets/secrets.yaml.template
+
+# -----------------------------------------------------------------------------
+# NIX BUILD ARTIFACTS
+# -----------------------------------------------------------------------------
+result
+result-*
+.direnv/
+.devenv/
+
+# Nix garbage
+*.drv
+
+# -----------------------------------------------------------------------------
+# EDITOR & IDE
+# -----------------------------------------------------------------------------
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.#*
+*.elc
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# OS FILES
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+.Trash-*
+
+# -----------------------------------------------------------------------------
+# TOOL-SPECIFIC
+# -----------------------------------------------------------------------------
+# Claude Code
+.claude/
+
+# SOPS (but NOT .sops.yaml - that's safe)
+.sops/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# Logs
+*.log
+logs/
+
+# -----------------------------------------------------------------------------
+# POTENTIALLY SENSITIVE RUNTIME DATA
+# -----------------------------------------------------------------------------
+# These might be created during testing/development
+*.sqlite
+*.db
+*.sqlite3
+
+# Environment files (if someone creates them locally)
+.env
+.env.*
+!.env.example
+
+# -----------------------------------------------------------------------------
+# NOTES FOR CONTRIBUTORS
+# -----------------------------------------------------------------------------
+# What IS safe to commit:
+#   - All .nix configuration files
+#   - .sops.yaml (just defines which keys can decrypt, no secrets)
+#   - secrets/secrets.yaml AFTER encrypting with: sops -e -i secrets/secrets.yaml
+#   - SSH public keys (id_*.pub)
+#   - README.md, scripts/, etc.
+#
+# What is NOT safe:
+#   - Unencrypted secrets/secrets.yaml
+#   - Any private keys (*.key, private-key, etc.)
+#   - Age private keys (keys.txt)
+#   - .env files with real values
+# -----------------------------------------------------------------------------
