@@ -176,66 +176,24 @@ sudo ./scripts/create-zfs-pool.sh /dev/sdb /dev/sdc tank
 # - Print the hostId and disk IDs to add to your config
 ```
 
-**Step 8: Mount Filesystems for Installation**
+**Step 8: Run the Install Script**
 
 ```bash
-# Mount the boot USB
-sudo mount /dev/disk/by-label/NIXOS /mnt
-sudo mkdir -p /mnt/boot
-sudo mount /dev/disk/by-label/BOOT /mnt/boot
+# This script handles everything:
+# - Mounts boot USB and EFI partition
+# - Imports ZFS pool and sets mountpoints
+# - Copies configuration to /mnt/etc/nixos/
+# - Generates hardware-configuration.nix
+# - Auto-configures hostId and network interface
+# - Validates SSH key and disk configuration
+# - Runs nixos-install
 
-# ZFS datasets should auto-mount, but set mountpoint for install:
-sudo zfs set mountpoint=/mnt/data tank/data
+sudo ./scripts/install.sh
 ```
 
-**Step 9: Copy Configuration to Install Location**
+The install takes 10-30 minutes depending on your internet speed.
 
-```bash
-# Create NixOS config directory
-sudo mkdir -p /mnt/etc/nixos
-
-# Copy your configuration
-sudo cp -r ~/nixnas/* /mnt/etc/nixos/
-
-# Generate hardware-specific config
-sudo nixos-generate-config --root /mnt
-
-# Move hardware config to the right place
-sudo mv /mnt/etc/nixos/hardware-configuration.nix \
-        /mnt/etc/nixos/hosts/nixnas/hardware-configuration.nix
-
-# Remove the auto-generated configuration.nix (we have our own)
-sudo rm -f /mnt/etc/nixos/configuration.nix
-```
-
-**Step 10: Set the Host ID (Required for ZFS)**
-
-```bash
-# Generate host ID
-HOST_ID=$(head -c 8 /etc/machine-id)
-echo "Your hostId is: $HOST_ID"
-
-# Edit the host configuration
-sudo nano /mnt/etc/nixos/hosts/nixnas/default.nix
-
-# Find this line and replace 00000000 with your hostId:
-# networking.hostId = "00000000";
-```
-
-Also update:
-- `externalInterface` - run `ip link` to find your ethernet interface name (often `enp0s3`, `eth0`, or similar)
-- `dataDisks` - add your `/dev/disk/by-id/` paths
-
-**Step 11: Install NixOS**
-
-```bash
-# This will take 10-30 minutes depending on your internet speed
-sudo nixos-install --flake /mnt/etc/nixos#nixnas --no-root-passwd
-```
-
-If it asks for a root password, just press Enter (we disable root login anyway).
-
-**Step 12: Reboot**
+**Step 9: Reboot**
 
 ```bash
 # Remove the installer USB first!
@@ -244,7 +202,7 @@ sudo reboot
 
 ### After First Boot
 
-**Step 13: Log In and Verify**
+**Step 10: Log In and Verify**
 
 ```bash
 # From another computer on your network:
@@ -255,7 +213,7 @@ ssh admin@nixnas.local
 ssh admin@192.168.1.XXX
 ```
 
-**Step 14: Set Up Samba Password**
+**Step 11: Set Up Samba Password**
 
 ```bash
 # On the NAS:
@@ -263,7 +221,7 @@ sudo smbpasswd -a admin
 # Enter a password for Samba file sharing
 ```
 
-**Step 15: Set Up Secrets (Optional but Recommended)**
+**Step 12: Set Up Secrets (Optional but Recommended)**
 
 ```bash
 # Generate age key from SSH host key
