@@ -266,7 +266,7 @@ echo ""
 HOST_ID=$(head -c 8 /etc/machine-id 2>/dev/null || echo "")
 
 echo -e "${CYAN}════════════════════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}SAVE THESE VALUES FOR YOUR NIXOS CONFIG:${NC}"
+echo -e "${BOLD}Configuration values:${NC}"
 echo -e "${CYAN}════════════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${BOLD}hostId:${NC}     ${GREEN}$HOST_ID${NC}"
@@ -275,14 +275,69 @@ echo -e "  ${BOLD}dataDisks:${NC}"
 echo -e "    ${GREEN}$DISK1${NC}"
 echo -e "    ${GREEN}$DISK2${NC}"
 echo ""
-echo -e "${CYAN}════════════════════════════════════════════════════════════════════${NC}"
+
+# =============================================================================
+# AUTO-UPDATE NIXOS CONFIG
+# =============================================================================
+
+# Find the config file - check common locations
+CONFIG_FILE=""
+for path in \
+    "/mnt/etc/nixos/hosts/nixnas/default.nix" \
+    "./hosts/nixnas/default.nix" \
+    "../hosts/nixnas/default.nix" \
+    "$(dirname "$0")/../hosts/nixnas/default.nix"
+do
+    if [ -f "$path" ]; then
+        CONFIG_FILE="$path"
+        break
+    fi
+done
+
+if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
+    echo -e "${CYAN}Updating NixOS configuration...${NC}"
+    echo -e "  File: $CONFIG_FILE"
+    echo ""
+
+    # Update hostId
+    if grep -q 'networking.hostId = "00000000"' "$CONFIG_FILE"; then
+        sed -i "s/networking.hostId = \"00000000\"/networking.hostId = \"$HOST_ID\"/" "$CONFIG_FILE"
+        echo -e "  ${GREEN}✓${NC} Updated hostId to $HOST_ID"
+    elif grep -q 'networking.hostId = "[0-9a-f]\{8\}"' "$CONFIG_FILE"; then
+        echo -e "  ${YELLOW}⚠${NC} hostId already set, skipping"
+    else
+        echo -e "  ${YELLOW}⚠${NC} Could not find hostId line to update"
+    fi
+
+    # Update dataDisks
+    if grep -q 'CHANGE-ME-DISK1' "$CONFIG_FILE"; then
+        # Use perl for multi-line replacement (more reliable than sed)
+        perl -i -pe "
+            s|\"\/dev\/disk\/by-id\/CHANGE-ME-DISK1\"|\"$DISK1\"|g;
+            s|\"\/dev\/disk\/by-id\/CHANGE-ME-DISK2\"|\"$DISK2\"|g;
+        " "$CONFIG_FILE"
+        echo -e "  ${GREEN}✓${NC} Updated dataDisks"
+    elif grep -q "$DISK1" "$CONFIG_FILE"; then
+        echo -e "  ${YELLOW}⚠${NC} dataDisks already configured, skipping"
+    else
+        echo -e "  ${YELLOW}⚠${NC} Could not find dataDisks to update"
+    fi
+
+    echo ""
+    echo -e "${GREEN}Configuration updated automatically!${NC}"
+else
+    echo -e "${YELLOW}Could not find NixOS config file to update automatically.${NC}"
+    echo ""
+    echo "Manually add these to hosts/nixnas/default.nix:"
+    echo ""
+    echo "  networking.hostId = \"$HOST_ID\";"
+    echo ""
+    echo "  dataDisks = ["
+    echo "    \"$DISK1\""
+    echo "    \"$DISK2\""
+    echo "  ];"
+fi
+
 echo ""
-echo "Add these to /mnt/etc/nixos/hosts/nixnas/default.nix:"
-echo ""
-echo "  networking.hostId = \"$HOST_ID\";"
-echo ""
-echo "  nixnas.zfs.dataDisks = ["
-echo "    \"$DISK1\""
-echo "    \"$DISK2\""
-echo "  ];"
+echo -e "${GREEN}ZFS setup complete! Continue with the installation.${NC}"
 echo ""
