@@ -81,37 +81,46 @@ echo -e "${GREEN}Step 2: Importing ZFS pool...${NC}"
 echo "Unmounting any existing ZFS datasets..."
 zfs unmount -a 2>/dev/null || true
 
-# If datasets are still busy, try lazy unmount
-if mountpoint -q /data 2>/dev/null; then
-    echo "Force unmounting /data..."
-    umount -l /data 2>/dev/null || true
-fi
+# If datasets are still busy, try lazy unmount for all /data paths
+for mnt in /data /data/media /data/downloads /data/documents /data/backups /data/docker /data/home-assistant /data/nextcloud /data/jellyfin /data/syncthing; do
+    if mountpoint -q "$mnt" 2>/dev/null; then
+        echo "Force unmounting $mnt..."
+        umount -l "$mnt" 2>/dev/null || true
+    fi
+done
 
-# Export and reimport the pool to get a clean state
+# Export the pool if it exists (this fully releases it)
 if zpool list tank &>/dev/null; then
     echo "Exporting pool for clean reimport..."
-    zpool export tank 2>/dev/null || true
+    zpool export -f tank 2>/dev/null || true
 fi
 
-# Import the pool
-if ! zpool list tank &>/dev/null; then
-    echo "Importing tank pool..."
-    zpool import -f tank || {
-        echo -e "${YELLOW}Warning: Could not import 'tank' pool${NC}"
-        echo "If you haven't created the ZFS pool yet, run ./create-zfs-pool.sh first"
-        read -p "Continue without ZFS? (y/n): " cont
-        if [ "$cont" != "y" ]; then
-            exit 1
-        fi
-    }
-fi
+# Import the pool WITHOUT mounting (-N flag)
+echo "Importing tank pool (without mounting)..."
+zpool import -f -N tank || {
+    echo -e "${YELLOW}Warning: Could not import 'tank' pool${NC}"
+    echo "If you haven't created the ZFS pool yet, run ./create-zfs-pool.sh first"
+    read -p "Continue without ZFS? (y/n): " cont
+    if [ "$cont" != "y" ]; then
+        exit 1
+    fi
+}
 
-# Mount ZFS datasets for installation
+# Set mountpoints for installation (pool is imported but not mounted)
 if zpool list tank &>/dev/null; then
     echo "Setting ZFS mountpoints for installation..."
-    # First disable automount, then set the install-time mountpoint
-    zfs set canmount=noauto tank/data 2>/dev/null || true
+
+    # Set all datasets to not auto-mount and update mountpoints
+    for ds in tank/data tank/data/media tank/data/downloads tank/data/documents tank/data/backups tank/data/docker tank/data/home-assistant tank/data/nextcloud tank/data/jellyfin tank/data/syncthing; do
+        if zfs list "$ds" &>/dev/null; then
+            zfs set canmount=noauto "$ds" 2>/dev/null || true
+        fi
+    done
+
+    # Set the root data mountpoint for install
     zfs set mountpoint=/mnt/data tank/data
+
+    # Mount just the root dataset (children inherit the path)
     zfs mount tank/data 2>/dev/null || true
 fi
 
