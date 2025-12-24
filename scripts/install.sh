@@ -77,7 +77,23 @@ mount /dev/disk/by-label/BOOT /mnt/boot
 echo ""
 echo -e "${GREEN}Step 2: Importing ZFS pool...${NC}"
 
-# Check if pool exists
+# First, unmount any existing ZFS mounts that might conflict
+echo "Unmounting any existing ZFS datasets..."
+zfs unmount -a 2>/dev/null || true
+
+# If datasets are still busy, try lazy unmount
+if mountpoint -q /data 2>/dev/null; then
+    echo "Force unmounting /data..."
+    umount -l /data 2>/dev/null || true
+fi
+
+# Export and reimport the pool to get a clean state
+if zpool list tank &>/dev/null; then
+    echo "Exporting pool for clean reimport..."
+    zpool export tank 2>/dev/null || true
+fi
+
+# Import the pool
 if ! zpool list tank &>/dev/null; then
     echo "Importing tank pool..."
     zpool import -f tank || {
@@ -90,10 +106,13 @@ if ! zpool list tank &>/dev/null; then
     }
 fi
 
-# Mount ZFS datasets
+# Mount ZFS datasets for installation
 if zpool list tank &>/dev/null; then
     echo "Setting ZFS mountpoints for installation..."
+    # First disable automount, then set the install-time mountpoint
+    zfs set canmount=noauto tank/data 2>/dev/null || true
     zfs set mountpoint=/mnt/data tank/data
+    zfs mount tank/data 2>/dev/null || true
 fi
 
 # =============================================================================
