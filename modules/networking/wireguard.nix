@@ -44,6 +44,7 @@ in
     };
 
     # Peers are defined via sops secrets or added here
+    # Supports both road-warrior (phones/laptops) and site-to-site (Pi gateways)
     peers = mkOption {
       type = types.listOf (types.submodule {
         options = {
@@ -57,25 +58,34 @@ in
           };
           allowedIPs = mkOption {
             type = types.listOf types.str;
-            description = "IP addresses allowed for this peer";
+            description = ''
+              IP addresses allowed for this peer.
+              - Road warrior: just VPN IP, e.g., [ "10.100.0.2/32" ]
+              - Site-to-site: include remote LAN, e.g., [ "10.100.0.2/32" "192.168.1.0/24" ]
+            '';
             example = [ "10.100.0.2/32" ];
           };
           endpoint = mkOption {
             type = types.nullOr types.str;
             default = null;
-            description = "Peer's endpoint (for site-to-site)";
+            description = "Peer's endpoint (for site-to-site with static IP/DDNS)";
             example = "remote.example.com:51820";
           };
           persistentKeepalive = mkOption {
             type = types.nullOr types.int;
-            default = null;
-            description = "Keepalive interval (for NAT traversal)";
+            default = 25;
+            description = "Keepalive interval in seconds (for NAT traversal, set to 25 for most cases)";
             example = 25;
+          };
+          presharedKeyFile = mkOption {
+            type = types.nullOr types.path;
+            default = null;
+            description = "Optional preshared key file for additional security";
           };
         };
       });
       default = [];
-      description = "List of WireGuard peers";
+      description = "List of WireGuard peers (road warriors and site-to-site gateways)";
     };
   };
 
@@ -114,6 +124,7 @@ in
         inherit (peer) publicKey allowedIPs;
         endpoint = peer.endpoint;
         persistentKeepalive = peer.persistentKeepalive;
+        presharedKeyFile = peer.presharedKeyFile;
       }) cfg.peers;
     };
 
@@ -144,23 +155,21 @@ in
       wg genkey | tee peer_private.key | wg pubkey > peer_public.key
       ```
 
-      ## Client Config Template
+      ## Client Config Template (Road Warrior - Phone/Laptop)
       ```ini
       [Interface]
       PrivateKey = <peer_private_key>
       Address = 10.100.0.X/32
-      DNS = 10.100.0.1  # Use NAS as DNS if running resolver
+      DNS = 10.100.0.1
 
       [Peer]
       PublicKey = <server_public_key>
-      AllowedIPs = 0.0.0.0/0  # Route all traffic (road warrior)
-      # Or: AllowedIPs = 10.100.0.0/24, 192.168.1.0/24  # Only specific networks
+      AllowedIPs = 0.0.0.0/0  # Route all traffic through VPN
       Endpoint = <your_public_ip>:${toString cfg.port}
       PersistentKeepalive = 25
       ```
 
-      ## Add Peer to NixOS Config
-      Add to hosts/nixnas/default.nix:
+      ## Add Road Warrior Peer
       ```nix
       nixnas.wireguard.peers = [
         {
@@ -169,6 +178,26 @@ in
           allowedIPs = [ "10.100.0.2/32" ];
         }
       ];
+      ```
+
+      ## Add Pi Gateway Peer (Site-to-Site)
+      For a Pi Gateway at a family member's home:
+      ```nix
+      nixnas.wireguard.peers = [
+        {
+          name = "pi-gateway-home1";
+          publicKey = "<pi_public_key>";
+          allowedIPs = [
+            "10.100.0.3/32"       # Pi's VPN IP
+            # "192.168.1.0/24"    # Uncomment to route to their LAN
+          ];
+        }
+      ];
+      ```
+
+      ## Check Connection Status
+      ```bash
+      sudo wg show
       ```
     '';
   };
