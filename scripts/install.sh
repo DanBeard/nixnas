@@ -148,52 +148,94 @@ fi
 rm -f /mnt/etc/nixos/configuration.nix
 
 # =============================================================================
-# Step 5: Set hostId
+# Step 5: Auto-configure system settings
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 5: Configuring hostId...${NC}"
+echo -e "${GREEN}Step 5: Auto-configuring system settings...${NC}"
 
-HOST_ID=$(head -c 8 /etc/machine-id)
-echo "Generated hostId: $HOST_ID"
+CONFIG_FILE="/mnt/etc/nixos/hosts/nixnas/default.nix"
 
-# Update hostId in config
-if [ -f /mnt/etc/nixos/hosts/nixnas/default.nix ]; then
-    sed -i "s/networking.hostId = \"00000000\"/networking.hostId = \"$HOST_ID\"/" \
-        /mnt/etc/nixos/hosts/nixnas/default.nix
-    echo "Updated hostId in configuration"
+if [ -f "$CONFIG_FILE" ]; then
+    # --- hostId ---
+    HOST_ID=$(head -c 8 /etc/machine-id)
+    if grep -q 'networking.hostId = "00000000"' "$CONFIG_FILE"; then
+        sed -i "s/networking.hostId = \"00000000\"/networking.hostId = \"$HOST_ID\"/" "$CONFIG_FILE"
+        echo -e "  ${GREEN}✓${NC} Set hostId to $HOST_ID"
+    elif grep -q 'networking.hostId = "[0-9a-f]\{8\}"' "$CONFIG_FILE"; then
+        echo -e "  ${YELLOW}⚠${NC} hostId already configured"
+    fi
+
+    # --- Network interface (for WireGuard NAT) ---
+    # Find the primary ethernet interface (first non-loopback, non-virtual interface with a link)
+    PRIMARY_IFACE=""
+    for iface in $(ip -o link show | awk -F': ' '{print $2}' | grep -v lo); do
+        # Skip virtual interfaces
+        case "$iface" in
+            docker*|br-*|veth*|virbr*|wg*|tun*|tap*) continue ;;
+        esac
+        # Check if it has a carrier (cable connected)
+        if [ -f "/sys/class/net/$iface/carrier" ] && [ "$(cat /sys/class/net/$iface/carrier 2>/dev/null)" = "1" ]; then
+            PRIMARY_IFACE="$iface"
+            break
+        fi
+    done
+
+    # Fallback: just get first ethernet-like interface
+    if [ -z "$PRIMARY_IFACE" ]; then
+        PRIMARY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -E '^(en|eth)' | head -1)
+    fi
+
+    if [ -n "$PRIMARY_IFACE" ] && [ "$PRIMARY_IFACE" != "eth0" ]; then
+        if grep -q 'externalInterface = "eth0"' "$CONFIG_FILE"; then
+            sed -i "s/externalInterface = \"eth0\"/externalInterface = \"$PRIMARY_IFACE\"/" "$CONFIG_FILE"
+            echo -e "  ${GREEN}✓${NC} Set externalInterface to $PRIMARY_IFACE"
+        fi
+    elif [ -n "$PRIMARY_IFACE" ]; then
+        echo -e "  ${GREEN}✓${NC} externalInterface is eth0 (correct)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} Could not detect network interface, leaving as eth0"
+    fi
+
+    # --- Check SSH key ---
+    USERS_FILE="/mnt/etc/nixos/modules/base/users.nix"
+    if [ -f "$USERS_FILE" ]; then
+        if grep -q 'ssh-ed25519' "$USERS_FILE" || grep -q 'ssh-rsa' "$USERS_FILE"; then
+            echo -e "  ${GREEN}✓${NC} SSH public key found in users.nix"
+        else
+            echo -e "  ${RED}✗${NC} No SSH key found in users.nix!"
+            echo ""
+            echo -e "  ${YELLOW}You need to add your SSH public key to log in after install.${NC}"
+            echo "  Edit: $USERS_FILE"
+            echo "  Add your key to: openssh.authorizedKeys.keys"
+            echo ""
+            read -p "  Press Enter after adding your SSH key, or Ctrl+C to abort..."
+        fi
+    fi
+
+    # --- Check dataDisks ---
+    if grep -q 'CHANGE-ME-DISK' "$CONFIG_FILE"; then
+        echo -e "  ${RED}✗${NC} dataDisks not configured!"
+        echo ""
+        echo -e "  ${YELLOW}Run create-zfs-pool.sh first to auto-configure disk IDs.${NC}"
+        echo ""
+        read -p "  Press Enter if you want to continue anyway, or Ctrl+C to abort..."
+    else
+        echo -e "  ${GREEN}✓${NC} dataDisks configured"
+    fi
+else
+    echo -e "${RED}Error: Config file not found at $CONFIG_FILE${NC}"
+    exit 1
 fi
 
-# =============================================================================
-# Step 6: Important reminders
-# =============================================================================
 echo ""
-echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}IMPORTANT: Before running nixos-install, please:${NC}"
-echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}Configuration complete!${NC}"
 echo ""
-echo "1. Add your SSH public key to users.nix:"
-echo "   Edit: /mnt/etc/nixos/modules/base/users.nix"
-echo "   Add your key to: openssh.authorizedKeys.keys"
-echo ""
-echo "2. Update disk IDs in the host configuration:"
-echo "   Edit: /mnt/etc/nixos/hosts/nixnas/default.nix"
-echo "   Find disk IDs with: ls -la /dev/disk/by-id/"
-echo ""
-echo "3. Check network interface name:"
-echo "   Run: ip link"
-echo "   Update 'externalInterface' in wireguard config if needed"
-echo ""
-echo "4. Review and customize other settings as needed"
-echo ""
-echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
-read -p "Press Enter when you've made the necessary changes, or Ctrl+C to abort..."
 
 # =============================================================================
-# Step 7: Install NixOS
+# Step 6: Install NixOS
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 7: Installing NixOS...${NC}"
+echo -e "${GREEN}Step 6: Installing NixOS...${NC}"
 echo "This may take a while..."
 echo ""
 
