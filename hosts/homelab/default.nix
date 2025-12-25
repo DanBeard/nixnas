@@ -1,5 +1,6 @@
-# NixNAS Host Configuration
-# Main configuration file with feature toggles
+# Homelab Host Configuration
+# Full-featured server with all services (for powerful hardware)
+# Requires: 4GB+ RAM, decent CPU (not Atom)
 
 { config, pkgs, lib, inputs, ... }:
 
@@ -12,7 +13,7 @@
   # SYSTEM IDENTIFICATION
   # =============================================================================
 
-  networking.hostName = "nixnas";
+  networking.hostName = "homelab";
 
   # IMPORTANT: Required for ZFS - generate with: head -c 8 /etc/machine-id
   # Run this on the target machine and replace the value below

@@ -6,5 +6,6 @@
 {
   imports = [
     ./zfs.nix
+    ./nfs.nix
   ];
 }

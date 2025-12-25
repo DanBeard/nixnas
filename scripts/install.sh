@@ -44,6 +44,38 @@ if [ ! -f /etc/NIXOS_LUSTRATE ] && [ ! -d /nix/store ]; then
 fi
 
 # =============================================================================
+# Step 0: Select host configuration
+# =============================================================================
+echo ""
+echo -e "${GREEN}Step 0: Select host configuration...${NC}"
+echo ""
+echo "Available hosts:"
+echo "  1) storage-node  - Minimal NAS (1GB RAM, ZFS + Samba + SSH only)"
+echo "  2) homelab       - Full server (4GB+ RAM, all services)"
+echo ""
+read -p "Select host [1/2]: " host_choice
+
+case "$host_choice" in
+    1|storage-node)
+        HOST_NAME="storage-node"
+        HOST_DIR="storage-node"
+        ;;
+    2|homelab)
+        HOST_NAME="homelab"
+        HOST_DIR="homelab"
+        ;;
+    *)
+        echo -e "${RED}Invalid choice. Defaulting to storage-node.${NC}"
+        HOST_NAME="storage-node"
+        HOST_DIR="storage-node"
+        ;;
+esac
+
+echo ""
+echo -e "${GREEN}Installing: ${HOST_NAME}${NC}"
+echo ""
+
+# =============================================================================
 # Step 1: Mount filesystems
 # =============================================================================
 echo ""
@@ -158,9 +190,9 @@ echo ""
 echo -e "${GREEN}Step 4: Generating hardware configuration...${NC}"
 
 # Backup existing hardware config
-if [ -f /mnt/etc/nixos/hosts/nixnas/hardware-configuration.nix ]; then
-    cp /mnt/etc/nixos/hosts/nixnas/hardware-configuration.nix \
-       /mnt/etc/nixos/hosts/nixnas/hardware-configuration.nix.template
+if [ -f "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix" ]; then
+    cp "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix" \
+       "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix.template"
 fi
 
 # Generate hardware config
@@ -169,7 +201,7 @@ nixos-generate-config --root /mnt
 # Move generated config to hosts directory
 if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
     mv /mnt/etc/nixos/hardware-configuration.nix \
-       /mnt/etc/nixos/hosts/nixnas/hardware-configuration.nix
+       "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix"
 fi
 
 # Remove generated configuration.nix (we use our own)
@@ -181,7 +213,7 @@ rm -f /mnt/etc/nixos/configuration.nix
 echo ""
 echo -e "${GREEN}Step 5: Auto-configuring system settings...${NC}"
 
-CONFIG_FILE="/mnt/etc/nixos/hosts/nixnas/default.nix"
+CONFIG_FILE="/mnt/etc/nixos/hosts/${HOST_DIR}/default.nix"
 
 if [ -f "$CONFIG_FILE" ]; then
     # --- hostId ---
@@ -263,11 +295,11 @@ echo ""
 # Step 6: Install NixOS
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 6: Installing NixOS...${NC}"
+echo -e "${GREEN}Step 6: Installing NixOS (${HOST_NAME})...${NC}"
 echo "This may take a while..."
 echo ""
 
-nixos-install --flake /mnt/etc/nixos#nixnas --no-root-passwd
+nixos-install --flake "/mnt/etc/nixos#${HOST_NAME}" --no-root-passwd
 
 # =============================================================================
 # Post-installation
@@ -277,27 +309,48 @@ echo -e "${GREEN}╔════════════════════
 echo -e "${GREEN}║                 Installation Complete!                         ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
-echo "Next steps after reboot:"
-echo ""
-echo "1. Set Samba password for admin user:"
-echo "   sudo smbpasswd -a admin"
-echo ""
-echo "2. Set up SOPS secrets (for WireGuard, Transmission, etc.):"
-echo "   # Generate age key from SSH host key"
-echo "   sudo ssh-to-age -i /etc/ssh/ssh_host_ed25519_key.pub"
-echo "   # Add the key to .sops.yaml and encrypt secrets"
-echo ""
-echo "3. Access services:"
-echo "   - SSH: ssh admin@nixnas.local"
-echo "   - Samba: \\\\nixnas.local\\media"
-echo "   - Home Assistant: http://nixnas.local:8123"
-echo "   - Transmission: http://nixnas.local:9091"
-echo "   - Jellyfin: http://nixnas.local:8096"
-echo "   - Grafana: http://nixnas.local:3000"
-echo "   - Syncthing: http://nixnas.local:8384"
-echo "   - Nextcloud: http://nixnas.local:8080"
-echo ""
-echo "4. Configure WireGuard peers in:"
-echo "   /etc/nixos/hosts/nixnas/default.nix"
+
+if [ "$HOST_NAME" = "storage-node" ]; then
+    # Minimal NAS post-install instructions
+    echo "Host: storage-node (Minimal NAS)"
+    echo ""
+    echo "Next steps after reboot:"
+    echo ""
+    echo "1. Set Samba password for admin user:"
+    echo "   sudo smbpasswd -a admin"
+    echo ""
+    echo "2. Access services:"
+    echo "   - SSH: ssh admin@storage-node.local"
+    echo "   - Samba: \\\\storage-node.local\\media"
+    echo ""
+    echo "3. When you set up homelab, it can mount this storage via NFS."
+else
+    # Full homelab post-install instructions
+    echo "Host: homelab (Full Server)"
+    echo ""
+    echo "Next steps after reboot:"
+    echo ""
+    echo "1. Set Samba password for admin user:"
+    echo "   sudo smbpasswd -a admin"
+    echo ""
+    echo "2. Set up SOPS secrets (for WireGuard, Transmission, etc.):"
+    echo "   # Generate age key from SSH host key"
+    echo "   sudo ssh-to-age -i /etc/ssh/ssh_host_ed25519_key.pub"
+    echo "   # Add the key to .sops.yaml and encrypt secrets"
+    echo ""
+    echo "3. Access services:"
+    echo "   - SSH: ssh admin@homelab.local"
+    echo "   - Samba: \\\\homelab.local\\media"
+    echo "   - Home Assistant: http://homelab.local:8123"
+    echo "   - Transmission: http://homelab.local:9091"
+    echo "   - Jellyfin: http://homelab.local:8096"
+    echo "   - Grafana: http://homelab.local:3000"
+    echo "   - Syncthing: http://homelab.local:8384"
+    echo "   - Nextcloud: http://homelab.local:8080"
+    echo ""
+    echo "4. Configure WireGuard peers in:"
+    echo "   /etc/nixos/hosts/homelab/default.nix"
+fi
+
 echo ""
 echo -e "${CYAN}Reboot now with: reboot${NC}"

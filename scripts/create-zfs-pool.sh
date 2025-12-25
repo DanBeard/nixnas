@@ -300,55 +300,72 @@ echo ""
 # AUTO-UPDATE NIXOS CONFIG
 # =============================================================================
 
-# Find the config file - check common locations
-CONFIG_FILE=""
+# Find all host config files and update them
+update_config() {
+    local config_file="$1"
+    local host_name="$2"
+
+    if [ ! -f "$config_file" ]; then
+        return 1
+    fi
+
+    echo -e "${CYAN}Updating $host_name configuration...${NC}"
+    echo -e "  File: $config_file"
+
+    # Update hostId
+    if grep -q 'networking.hostId = "00000000"' "$config_file"; then
+        sed -i "s/networking.hostId = \"00000000\"/networking.hostId = \"$HOST_ID\"/" "$config_file"
+        echo -e "  ${GREEN}✓${NC} Updated hostId to $HOST_ID"
+    elif grep -q 'networking.hostId = "[0-9a-f]\{8\}"' "$config_file"; then
+        echo -e "  ${YELLOW}⚠${NC} hostId already set, skipping"
+    fi
+
+    # Update dataDisks
+    if grep -q 'CHANGE-ME-DISK1' "$config_file"; then
+        DISK1_ESCAPED=$(echo "$DISK1" | sed 's/\//\\\//g')
+        DISK2_ESCAPED=$(echo "$DISK2" | sed 's/\//\\\//g')
+        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK1\"/\"$DISK1_ESCAPED\"/g" "$config_file"
+        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK2\"/\"$DISK2_ESCAPED\"/g" "$config_file"
+        echo -e "  ${GREEN}✓${NC} Updated dataDisks"
+    elif grep -q "$DISK1" "$config_file"; then
+        echo -e "  ${YELLOW}⚠${NC} dataDisks already configured, skipping"
+    fi
+
+    echo ""
+    return 0
+}
+
+# Look for config files in various locations
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NIXNAS_DIR="$(dirname "$SCRIPT_DIR")"
+FOUND_CONFIG=false
+
+# Check for storage-node config
 for path in \
-    "/mnt/etc/nixos/hosts/nixnas/default.nix" \
-    "./hosts/nixnas/default.nix" \
-    "../hosts/nixnas/default.nix" \
-    "$(dirname "$0")/../hosts/nixnas/default.nix"
+    "/mnt/etc/nixos/hosts/storage-node/default.nix" \
+    "${NIXNAS_DIR}/hosts/storage-node/default.nix"
 do
-    if [ -f "$path" ]; then
-        CONFIG_FILE="$path"
+    if update_config "$path" "storage-node"; then
+        FOUND_CONFIG=true
         break
     fi
 done
 
-if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
-    echo -e "${CYAN}Updating NixOS configuration...${NC}"
-    echo -e "  File: $CONFIG_FILE"
-    echo ""
-
-    # Update hostId
-    if grep -q 'networking.hostId = "00000000"' "$CONFIG_FILE"; then
-        sed -i "s/networking.hostId = \"00000000\"/networking.hostId = \"$HOST_ID\"/" "$CONFIG_FILE"
-        echo -e "  ${GREEN}✓${NC} Updated hostId to $HOST_ID"
-    elif grep -q 'networking.hostId = "[0-9a-f]\{8\}"' "$CONFIG_FILE"; then
-        echo -e "  ${YELLOW}⚠${NC} hostId already set, skipping"
-    else
-        echo -e "  ${YELLOW}⚠${NC} Could not find hostId line to update"
+# Check for homelab config
+for path in \
+    "/mnt/etc/nixos/hosts/homelab/default.nix" \
+    "${NIXNAS_DIR}/hosts/homelab/default.nix"
+do
+    if update_config "$path" "homelab"; then
+        FOUND_CONFIG=true
+        break
     fi
+done
 
-    # Update dataDisks
-    if grep -q 'CHANGE-ME-DISK1' "$CONFIG_FILE"; then
-        # Use sed for replacement (escape forward slashes in disk paths)
-        DISK1_ESCAPED=$(echo "$DISK1" | sed 's/\//\\\//g')
-        DISK2_ESCAPED=$(echo "$DISK2" | sed 's/\//\\\//g')
-        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK1\"/\"$DISK1_ESCAPED\"/g" "$CONFIG_FILE"
-        sed -i "s/\"\/dev\/disk\/by-id\/CHANGE-ME-DISK2\"/\"$DISK2_ESCAPED\"/g" "$CONFIG_FILE"
-        echo -e "  ${GREEN}✓${NC} Updated dataDisks"
-    elif grep -q "$DISK1" "$CONFIG_FILE"; then
-        echo -e "  ${YELLOW}⚠${NC} dataDisks already configured, skipping"
-    else
-        echo -e "  ${YELLOW}⚠${NC} Could not find dataDisks to update"
-    fi
-
+if [ "$FOUND_CONFIG" = false ]; then
+    echo -e "${YELLOW}Could not find NixOS config files to update automatically.${NC}"
     echo ""
-    echo -e "${GREEN}Configuration updated automatically!${NC}"
-else
-    echo -e "${YELLOW}Could not find NixOS config file to update automatically.${NC}"
-    echo ""
-    echo "Manually add these to hosts/nixnas/default.nix:"
+    echo "Manually add these to your host's default.nix:"
     echo ""
     echo "  networking.hostId = \"$HOST_ID\";"
     echo ""
@@ -356,6 +373,8 @@ else
     echo "    \"$DISK1\""
     echo "    \"$DISK2\""
     echo "  ];"
+else
+    echo -e "${GREEN}Configuration updated automatically!${NC}"
 fi
 
 echo ""

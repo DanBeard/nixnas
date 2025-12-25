@@ -1,5 +1,5 @@
 {
-  description = "NixNAS - Self-hosted NixOS-based Network Attached Storage";
+  description = "NixNAS - Multi-host NixOS configurations for home infrastructure";
 
   inputs = {
     # NixOS 24.11 stable
@@ -38,32 +38,53 @@
         config.allowUnfree = true;
         overlays = [ overlay-unstable ];
       };
+
+      # Common modules for all hosts
+      commonModules = [
+        disko.nixosModules.disko
+        sops-nix.nixosModules.sops
+        ({ config, pkgs, ... }: {
+          nixpkgs.overlays = [ overlay-unstable ];
+        })
+        ./modules
+      ];
     in
     {
-      nixosConfigurations.nixnas = nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = { inherit inputs; };
-        modules = [
-          # Disk partitioning (optional, for fresh installs)
-          disko.nixosModules.disko
+      # =============================================================================
+      # HOST CONFIGURATIONS
+      # =============================================================================
 
-          # Secrets management
-          sops-nix.nixosModules.sops
+      nixosConfigurations = {
+        # -------------------------------------------------------------------------
+        # storage-node: Minimal NAS for memory-constrained hardware (QNAP, 1GB RAM)
+        # Only provides: ZFS storage, Samba/NFS file sharing, SSH
+        # -------------------------------------------------------------------------
+        storage-node = nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = commonModules ++ [
+            ./hosts/storage-node
+          ];
+        };
 
-          # Custom overlays
-          ({ config, pkgs, ... }: {
-            nixpkgs.overlays = [ overlay-unstable ];
-          })
-
-          # Host configuration
-          ./hosts/nixnas
-
-          # All custom modules
-          ./modules
-        ];
+        # -------------------------------------------------------------------------
+        # homelab: Full-featured server with all services
+        # Requires: 4GB+ RAM, decent CPU
+        # Provides: Jellyfin, Home Assistant, Docker, Nextcloud, WireGuard, etc.
+        # -------------------------------------------------------------------------
+        homelab = nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = commonModules ++ [
+            ./hosts/homelab
+          ];
+        };
       };
 
-      # Development shell for working on the configuration
+      # =============================================================================
+      # DEVELOPMENT SHELL
+      # =============================================================================
+
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           nixpkgs-fmt    # Nix formatter
