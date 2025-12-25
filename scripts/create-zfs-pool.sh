@@ -335,30 +335,28 @@ update_config() {
     return 0
 }
 
-# Look for config files in various locations
+# Look for config files in various locations and update ALL of them
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAS_DIR="$(dirname "$SCRIPT_DIR")"
 FOUND_CONFIG=false
 
-# Check for storage-node config
+# Update ALL config files found (both source and /mnt/etc/nixos/)
 for path in \
     "/mnt/etc/nixos/hosts/storage-node/default.nix" \
-    "${NIXNAS_DIR}/hosts/storage-node/default.nix"
-do
-    if update_config "$path" "storage-node"; then
-        FOUND_CONFIG=true
-        break
-    fi
-done
-
-# Check for homelab config
-for path in \
+    "${NIXNAS_DIR}/hosts/storage-node/default.nix" \
     "/mnt/etc/nixos/hosts/homelab/default.nix" \
     "${NIXNAS_DIR}/hosts/homelab/default.nix"
 do
-    if update_config "$path" "homelab"; then
-        FOUND_CONFIG=true
-        break
+    if [ -f "$path" ]; then
+        # Determine host name from path
+        if [[ "$path" == *"storage-node"* ]]; then
+            host_name="storage-node"
+        else
+            host_name="homelab"
+        fi
+        if update_config "$path" "$host_name"; then
+            FOUND_CONFIG=true
+        fi
     fi
 done
 
