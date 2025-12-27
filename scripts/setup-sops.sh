@@ -201,9 +201,20 @@ echo -e "  ${GREEN}✓${NC} Secrets encrypted"
 echo ""
 echo -e "${GREEN}Step 6: Enabling sops-nix in flake.nix...${NC}"
 
-# Check if sops is already enabled
+# First, uncomment the sops-nix input if it's commented out
+if grep -q "# sops-nix = {" "$NIXOS_DIR/flake.nix"; then
+    sed -i 's/# sops-nix = {/sops-nix = {/' "$NIXOS_DIR/flake.nix"
+    sed -i 's/#   url = "github:Mic92\/sops-nix";/  url = "github:Mic92\/sops-nix";/' "$NIXOS_DIR/flake.nix"
+    sed -i 's/#   inputs.nixpkgs.follows = "nixpkgs";/  inputs.nixpkgs.follows = "nixpkgs";/' "$NIXOS_DIR/flake.nix"
+    sed -i 's/# };/};/' "$NIXOS_DIR/flake.nix"
+    # Also need to add sops-nix to outputs
+    sed -i 's/outputs = { self, nixpkgs, nixpkgs-unstable, disko, \.\.\. }@inputs:/outputs = { self, nixpkgs, nixpkgs-unstable, disko, sops-nix, ... }@inputs:/' "$NIXOS_DIR/flake.nix"
+    echo -e "  ${GREEN}✓${NC} Uncommented sops-nix input"
+fi
+
+# Check if sops module is already enabled
 if grep -q "sops-nix.nixosModules.sops" "$NIXOS_DIR/flake.nix"; then
-    echo -e "  ${YELLOW}⚠${NC} sops-nix already enabled in flake.nix"
+    echo -e "  ${YELLOW}⚠${NC} sops-nix module already enabled in flake.nix"
 else
     # Add sops module to homelab
     sed -i 's/modules = baseModules ++ \[/modules = baseModules ++ [\n            sops-nix.nixosModules.sops/' "$NIXOS_DIR/flake.nix"

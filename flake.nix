@@ -14,14 +14,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Secrets management
-    sops-nix = {
-      url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Secrets management - uncomment after running setup-sops.sh (Phase 2)
+    # sops-nix = {
+    #   url = "github:Mic92/sops-nix";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, disko, sops-nix, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, disko, ... }@inputs:
     let
       system = "x86_64-linux";
 
@@ -48,8 +48,8 @@
         ./modules
       ];
 
-      # Modules with sops enabled (add sops-nix.nixosModules.sops when secrets are configured)
-      # For now, homelab doesn't use sops until secrets.yaml is created
+      # Note: sops-nix is disabled by default for initial install
+      # Run setup-sops.sh after first boot to enable encrypted secrets
     in
     {
       # =============================================================================
