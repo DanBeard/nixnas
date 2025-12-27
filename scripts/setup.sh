@@ -158,7 +158,7 @@ EOF
 fi
 
 # =============================================================================
-# Step 6: Mount NFS shares
+# Step 6: Mount NFS shares (optional - skip if NAS not ready)
 # =============================================================================
 echo ""
 echo -e "${GREEN}Step 6: Mounting NFS shares...${NC}"
@@ -167,19 +167,30 @@ echo "Testing connection to NAS at $NAS_IP..."
 if ping -c 1 -W 3 "$NAS_IP" &> /dev/null; then
     echo -e "  ${GREEN}✓${NC} NAS is reachable"
 
-    # Try to mount
-    if mount -a 2>/dev/null; then
-        echo -e "  ${GREEN}✓${NC} NFS shares mounted"
+    # Check if NFS is actually available (quick test with timeout)
+    echo "Checking if NFS is available..."
+    if timeout 5 showmount -e "$NAS_IP" &> /dev/null; then
+        echo -e "  ${GREEN}✓${NC} NFS service is running"
+        # Try to mount with a short timeout
+        if timeout 10 mount -a 2>/dev/null; then
+            echo -e "  ${GREEN}✓${NC} NFS shares mounted"
+        else
+            echo -e "  ${YELLOW}⚠${NC} Could not mount NFS shares"
+            echo "    Make sure shares are configured in OMV"
+            echo "    You can mount manually later with: sudo mount -a"
+        fi
     else
-        echo -e "  ${YELLOW}⚠${NC} Could not mount NFS shares"
-        echo "    Make sure NFS is enabled on your OMV NAS and shares are configured"
-        echo "    You can mount manually later with: sudo mount -a"
+        echo -e "  ${YELLOW}⚠${NC} NFS service not available yet on NAS"
+        echo "    This is fine - NFS mounts are configured in /etc/fstab"
+        echo "    They will auto-mount on next boot, or run: sudo mount -a"
     fi
 else
     echo -e "  ${YELLOW}⚠${NC} Cannot reach NAS at $NAS_IP"
     echo "    NFS mounts are configured but not mounted"
-    echo "    After fixing network, run: sudo mount -a"
+    echo "    After NAS is ready, run: sudo mount -a"
 fi
+
+echo -e "  ${CYAN}ℹ${NC}  Skipping NFS mount is OK - you can connect later"
 
 # =============================================================================
 # Step 7: Create config directories
