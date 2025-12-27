@@ -86,7 +86,7 @@ echo -e "${GREEN}Step 1: Mounting filesystems...${NC}"
 
 # Check if USB drive is prepared
 if [ ! -b /dev/disk/by-label/NIXOS ]; then
-    echo -e "${RED}Error: USB boot drive not found (label: NIXOS)${NC}"
+    echo -e "${RED}Error: Boot drive not found (label: NIXOS)${NC}"
     echo "Run ./prepare-usb.sh first"
     exit 1
 fi
@@ -95,6 +95,16 @@ if [ ! -b /dev/disk/by-label/BOOT ]; then
     echo -e "${RED}Error: EFI partition not found (label: BOOT)${NC}"
     echo "Run ./prepare-usb.sh first"
     exit 1
+fi
+
+# Unmount if already mounted (for re-runs)
+if mountpoint -q /mnt/boot 2>/dev/null; then
+    echo "Unmounting existing /mnt/boot..."
+    umount /mnt/boot
+fi
+if mountpoint -q /mnt 2>/dev/null; then
+    echo "Unmounting existing /mnt..."
+    umount /mnt
 fi
 
 # Mount root
@@ -171,6 +181,12 @@ fi
 echo ""
 echo -e "${GREEN}Step 3: Setting up NixOS configuration...${NC}"
 
+# Clean any previous installation attempts
+if [ -d /mnt/etc/nixos ]; then
+    echo "Cleaning previous configuration..."
+    rm -rf /mnt/etc/nixos
+fi
+
 # Create nixos config directory
 mkdir -p /mnt/etc/nixos
 
@@ -181,6 +197,10 @@ NIXNAS_DIR="$(dirname "$SCRIPT_DIR")"
 if [ -f "$NIXNAS_DIR/flake.nix" ]; then
     echo "Copying NixNAS configuration..."
     cp -r "$NIXNAS_DIR"/* /mnt/etc/nixos/
+
+    # Remove any stray generated files that might cause conflicts
+    rm -f /mnt/etc/nixos/configuration.nix
+    rm -f /mnt/etc/nixos/hardware-configuration.nix
 else
     echo -e "${YELLOW}NixNAS configuration not found in $NIXNAS_DIR${NC}"
     echo "You'll need to copy the configuration manually or clone from git."
@@ -198,23 +218,28 @@ fi
 echo ""
 echo -e "${GREEN}Step 4: Generating hardware configuration...${NC}"
 
-# Backup existing hardware config
+# Backup existing hardware config template (for reference)
 if [ -f "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix" ]; then
     cp "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix" \
        "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix.template"
 fi
 
-# Generate hardware config
-nixos-generate-config --root /mnt
+# Generate hardware config to a temporary location first
+nixos-generate-config --root /mnt --dir /mnt/etc/nixos/generated
 
-# Move generated config to hosts directory
-if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-    mv /mnt/etc/nixos/hardware-configuration.nix \
+# Move generated hardware config to the correct hosts directory
+if [ -f /mnt/etc/nixos/generated/hardware-configuration.nix ]; then
+    mv /mnt/etc/nixos/generated/hardware-configuration.nix \
        "/mnt/etc/nixos/hosts/${HOST_DIR}/hardware-configuration.nix"
+    echo -e "  ${GREEN}✓${NC} Generated hardware-configuration.nix for ${HOST_NAME}"
 fi
 
-# Remove generated configuration.nix (we use our own)
+# Clean up generated files we don't need
+rm -rf /mnt/etc/nixos/generated
 rm -f /mnt/etc/nixos/configuration.nix
+rm -f /mnt/etc/nixos/hardware-configuration.nix
+
+echo -e "  ${GREEN}✓${NC} Hardware configuration ready"
 
 # =============================================================================
 # Step 5: Auto-configure system settings
