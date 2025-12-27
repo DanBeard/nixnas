@@ -39,15 +39,17 @@
         overlays = [ overlay-unstable ];
       };
 
-      # Common modules for all hosts
-      commonModules = [
+      # Base modules for all hosts (no sops)
+      baseModules = [
         disko.nixosModules.disko
-        sops-nix.nixosModules.sops
         ({ config, pkgs, ... }: {
           nixpkgs.overlays = [ overlay-unstable ];
         })
         ./modules
       ];
+
+      # Modules with sops enabled (add sops-nix.nixosModules.sops when secrets are configured)
+      # For now, homelab doesn't use sops until secrets.yaml is created
     in
     {
       # =============================================================================
@@ -62,7 +64,7 @@
         storage-node = nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
-          modules = commonModules ++ [
+          modules = baseModules ++ [
             ./hosts/storage-node
           ];
         };
@@ -71,11 +73,12 @@
         # homelab: Full-featured server with all services
         # Requires: 4GB+ RAM, decent CPU
         # Provides: Jellyfin, Home Assistant, Docker, Nextcloud, WireGuard, etc.
+        # NOTE: Add sops-nix.nixosModules.sops to modules list after configuring secrets
         # -------------------------------------------------------------------------
         homelab = nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
-          modules = commonModules ++ [
+          modules = baseModules ++ [
             ./hosts/homelab
           ];
         };
