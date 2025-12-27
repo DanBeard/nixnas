@@ -15,6 +15,8 @@
       "transmission"    # transmission access
       "video"           # video device access (for transcoding)
       "render"          # GPU render access
+      "media"           # media file access
+      "samba"           # samba file sharing access
     ];
     shell = pkgs.zsh;
 
@@ -88,6 +90,4 @@
     };
   };
 
-  # Add admin to media and samba groups
-  users.users.admin.extraGroups = lib.mkAfter [ "media" "samba" ];
 }

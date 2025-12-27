@@ -50,8 +50,8 @@ in
       ];
     };
 
-    # Allow jellyfin to access GPU for transcoding
-    users.users.jellyfin.extraGroups = [ "render" "video" ];
+    # Allow jellyfin to access GPU for transcoding and media library
+    users.users.jellyfin.extraGroups = [ "render" "video" "media" ];
 
     # Ensure directories exist
     systemd.tmpfiles.rules = [
@@ -62,9 +62,6 @@ in
       "d ${cfg.mediaDir}/music 0775 root media -"
       "d ${cfg.mediaDir}/photos 0775 root media -"
     ];
-
-    # Add jellyfin to media group for library access
-    users.users.jellyfin.extraGroups = mkAfter [ "media" ];
 
     # Avahi service for discovery
     services.avahi.extraServiceFiles.jellyfin = mkIf config.services.avahi.enable ''
