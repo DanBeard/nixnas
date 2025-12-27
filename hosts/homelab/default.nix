@@ -178,14 +178,18 @@
   # =============================================================================
   # SOPS SECRETS CONFIGURATION
   # =============================================================================
-
-  sops = {
-    defaultSopsFile = ../../secrets/secrets.yaml;
-    age = {
-      # Use SSH host key for decryption
-      sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    };
-  };
+  # NOTE: Uncomment after first boot and setting up secrets:
+  #   1. Get the host's age key: sudo ssh-to-age -i /etc/ssh/ssh_host_ed25519_key.pub
+  #   2. Add it to .sops.yaml
+  #   3. Create secrets/secrets.yaml from the template
+  #   4. Uncomment below and rebuild
+  #
+  # sops = {
+  #   defaultSopsFile = ../../secrets/secrets.yaml;
+  #   age = {
+  #     sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  #   };
+  # };
 
   # =============================================================================
   # ADDITIONAL PACKAGES
