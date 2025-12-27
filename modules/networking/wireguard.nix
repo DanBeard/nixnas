@@ -7,10 +7,21 @@ with lib;
 
 let
   cfg = config.nixnas.wireguard;
+  # Check if sops is available
+  hasSops = config ? sops && config.sops ? secrets;
 in
 {
   options.nixnas.wireguard = {
     enable = mkEnableOption "WireGuard VPN server";
+
+    privateKeyFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = ''
+        Path to WireGuard private key file.
+        If null, a key will be generated at /etc/wireguard/private.key on first boot.
+      '';
+    };
 
     port = mkOption {
       type = types.port;
@@ -93,6 +104,19 @@ in
     # WireGuard kernel module
     boot.kernelModules = [ "wireguard" ];
 
+    # Generate WireGuard key on first boot if not using sops or explicit file
+    system.activationScripts.wireguard-keygen = mkIf (cfg.privateKeyFile == null) ''
+      if [ ! -f /etc/wireguard/private.key ]; then
+        mkdir -p /etc/wireguard
+        ${pkgs.wireguard-tools}/bin/wg genkey > /etc/wireguard/private.key
+        chmod 600 /etc/wireguard/private.key
+        ${pkgs.wireguard-tools}/bin/wg pubkey < /etc/wireguard/private.key > /etc/wireguard/public.key
+        chmod 644 /etc/wireguard/public.key
+        echo "WireGuard keys generated. Public key:"
+        cat /etc/wireguard/public.key
+      fi
+    '';
+
     # WireGuard interface configuration
     networking.wireguard.interfaces.${cfg.interface} = {
       # Server's VPN IP
@@ -101,8 +125,10 @@ in
       # Listen port
       listenPort = cfg.port;
 
-      # Private key from sops secret
-      privateKeyFile = config.sops.secrets."wireguard/private-key".path;
+      # Private key file - use explicit path, or generated key
+      privateKeyFile = if cfg.privateKeyFile != null
+        then cfg.privateKeyFile
+        else "/etc/wireguard/private.key";
 
       # NAT for road warriors (allow them to access internet through NAS)
       postSetup = ''
@@ -131,13 +157,6 @@ in
     # Open firewall port for WireGuard
     networking.firewall.allowedUDPPorts = [ cfg.port ];
 
-    # Sops secret for WireGuard private key
-    sops.secrets."wireguard/private-key" = {
-      owner = "root";
-      group = "root";
-      mode = "0400";
-    };
-
     # WireGuard tools
     environment.systemPackages = with pkgs; [
       wireguard-tools
@@ -148,7 +167,7 @@ in
       # WireGuard Configuration
 
       ## Server Public Key
-      Run: sudo cat ${config.sops.secrets."wireguard/private-key".path} | wg pubkey
+      Run: cat /etc/wireguard/public.key
 
       ## Generate New Peer Keys
       ```bash

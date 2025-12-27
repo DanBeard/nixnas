@@ -23,8 +23,8 @@ in
 
         security = {
           admin_user = "admin";
-          # Password from sops secret
-          admin_password = "$__file{${config.sops.secrets."grafana/admin-password".path}}";
+          # Password from file (generated on first boot)
+          admin_password = "$__file{/var/lib/grafana/admin-password}";
         };
 
         # Disable analytics/telemetry
@@ -64,12 +64,21 @@ in
       };
     };
 
-    # Grafana admin password secret
-    sops.secrets."grafana/admin-password" = {
-      owner = "grafana";
-      group = "grafana";
-      mode = "0400";
-    };
+    # Generate admin password on first boot if it doesn't exist
+    system.activationScripts.grafana-admin-pass = ''
+      PASS_FILE="/var/lib/grafana/admin-password"
+      if [ ! -f "$PASS_FILE" ]; then
+        echo "Generating Grafana admin password..."
+        mkdir -p /var/lib/grafana
+        echo -n "admin" > "$PASS_FILE"
+        chmod 600 "$PASS_FILE"
+        chown grafana:grafana "$PASS_FILE" 2>/dev/null || true
+
+        # Save password to summary file
+        echo "Grafana - User: admin, Password: admin (CHANGE THIS!)" >> /var/lib/nixnas-passwords.txt
+        chmod 600 /var/lib/nixnas-passwords.txt
+      fi
+    '';
 
     # Pre-built dashboard for NAS monitoring
     environment.etc."grafana/dashboards/nixnas-overview.json".text = builtins.toJSON {

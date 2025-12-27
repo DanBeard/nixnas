@@ -1,142 +1,6 @@
-# NixNAS - Multi-Host NixOS Home Infrastructure
+# NixNAS - Homelab NixOS Configuration
 
-A modular NixOS configuration for home infrastructure with multiple host types.
-
-## Quick Start: Homelab with OMV NAS
-
-**Your setup**: Homelab PC (i5, 16GB RAM, 256GB SSD) + OpenMediaVault NAS for storage
-
-### Step 1: Identify Your Drives
-
-```bash
-# In the NixOS installer, find your SSD
-lsblk
-
-# Example output - identify your 256GB SSD (e.g., /dev/sda)
-# NAME   SIZE
-# sda    256G   <- Your SSD for NixOS
-# sdb    16G    <- Your installer USB (ignore this)
-```
-
-### Step 2: Clone This Repository
-
-```bash
-# Get git
-nix-shell -p git
-
-# Clone the config
-cd ~
-git clone https://github.com/DanBeard/nixnas.git
-cd nixnas
-```
-
-### Step 3: Add Your SSH Public Key
-
-```bash
-nano modules/base/users.nix
-
-# Find the openssh.authorizedKeys.keys section and add your key:
-# openssh.authorizedKeys.keys = [
-#   "ssh-ed25519 AAAAC3Nz... your-key-here"
-# ];
-```
-
-Save with Ctrl+X, Y, Enter.
-
-### Step 4: Set Your OMV NAS IP Address
-
-```bash
-nano hosts/homelab/default.nix
-
-# Find this line (around line 40):
-#   nasAddress = "192.168.1.100";
-# Change it to your OMV NAS's actual IP address
-```
-
-Save with Ctrl+X, Y, Enter.
-
-### Step 5: Prepare the SSD
-
-```bash
-chmod +x scripts/*.sh
-
-# Replace /dev/sda with YOUR SSD device!
-# WARNING: This erases the drive!
-sudo ./scripts/prepare-usb.sh /dev/sda
-```
-
-### Step 6: Run the Installer
-
-```bash
-sudo ./scripts/install.sh
-
-# When prompted, select:
-#   2) homelab - Full server (4GB+ RAM, NFS client, all services)
-```
-
-Wait for installation to complete (10-30 minutes).
-
-### Step 7: Reboot
-
-```bash
-# Remove the installer USB first!
-reboot
-```
-
-### Step 8: After First Boot - Configure OMV NAS
-
-**On your OpenMediaVault NAS web UI:**
-
-1. Go to **Storage → Shared Folders** and create:
-   - `media`
-   - `downloads`
-   - `documents`
-   - `backups`
-   - `nextcloud`
-   - `syncthing`
-
-2. Go to **Services → NFS → Settings** and enable NFS
-
-3. Go to **Services → NFS → Shares** and add each folder:
-   - Shared folder: (select each one)
-   - Client: `192.168.1.0/24` (or your network range)
-   - Privilege: Read/Write
-   - Extra options: `subtree_check,insecure`
-
-4. Click Save and Apply
-
-### Step 9: Verify NFS Mounts
-
-```bash
-# SSH into your homelab
-ssh admin@homelab.local
-
-# Check if NFS is mounted
-ls /mnt/nas/media
-
-# If empty, the NAS might not be configured yet or IP is wrong
-# Check/update the NAS IP:
-sudo nano /etc/nixos/hosts/homelab/default.nix
-sudo nixos-rebuild switch --flake /etc/nixos#homelab
-```
-
-### You're Done!
-
-Access your services:
-
-| Service | URL |
-|---------|-----|
-| SSH | `ssh admin@homelab.local` |
-| Home Assistant | http://homelab.local:8123 |
-| Jellyfin | http://homelab.local:8096 |
-| Transmission | http://homelab.local:9091 |
-| Grafana | http://homelab.local:3000 |
-| Syncthing | http://homelab.local:8384 |
-| Nextcloud | http://homelab.local:8080 |
-
-**Note**: File sharing (Samba) is on your OMV NAS, not the homelab.
-
----
+A modular NixOS configuration for a homelab server using OpenMediaVault NAS for storage.
 
 ## Architecture
 
@@ -147,7 +11,7 @@ Access your services:
 │                                                                  │
 │  ┌──────────────────────┐         ┌────────────────────────┐    │
 │  │  Homelab PC (NixOS)  │         │  OMV NAS               │    │
-│  │  i5, 16GB RAM, 256GB │◄───────►│  ext4 RAID1            │    │
+│  │  i5, 16GB RAM, 256GB │◄───────►│  ext4 RAID             │    │
 │  │                      │  NFS    │                        │    │
 │  │  LOCAL (SSD):        │         │  Shared directories:   │    │
 │  │  • NixOS system      │         │  • media               │    │
@@ -165,64 +29,125 @@ Access your services:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Host Configurations
+## Quick Start
 
-### homelab (Full Server)
-**For powerful hardware (4GB+ RAM, decent CPU) with external NAS storage**
+### Phase 1: Install NixOS
 
-- WireGuard VPN (self-hosted, no cloud)
-- Home Assistant
-- Jellyfin media server
-- Transmission torrent client
-- Nextcloud cloud storage
-- Syncthing file sync
-- Docker
-- Prometheus + Grafana monitoring
-- Python 3.12 + Node.js 22
-- NFS client (mounts storage from OMV NAS)
+**Requirements**: PC with 4GB+ RAM, 64GB+ SSD/NVMe, NixOS installer USB
 
-### storage-node (Minimal NAS)
-**For memory-constrained hardware (1GB RAM, Intel Atom, QNAP, etc.)**
+```bash
+# 1. Boot from NixOS installer ISO
 
-- ZFS mirror with automatic snapshots
-- Samba file sharing
-- NFS exports for other hosts
-- SSH access (key-only)
-- Firewall + fail2ban
-- Auto-updates
+# 2. Get networking (usually automatic with ethernet)
 
-### pi-gateway (Raspberry Pi Bridge)
-**For Raspberry Pi Zero 2W at remote locations**
+# 3. Clone this repo
+nix-shell -p git
+git clone https://github.com/DanBeard/nixnas.git
+cd nixnas
 
-- WireGuard client connecting to homelab
-- Routes local LAN to VPN
-- Enables family members to access services
+# 4. Add your SSH public key
+nano modules/base/users.nix
+# Find openssh.authorizedKeys.keys and add your key
+
+# 5. Set your OMV NAS IP address
+nano hosts/homelab/default.nix
+# Find nasAddress = "192.168.1.100" and change it
+
+# 6. Prepare your target drive (replace nvme0n1 with your drive)
+chmod +x scripts/*.sh
+sudo ./scripts/prepare-usb.sh /dev/nvme0n1
+
+# 7. Install
+sudo ./scripts/install.sh
+
+# 8. Reboot (remove installer USB first!)
+reboot
+```
+
+### Phase 2: First Login
+
+```bash
+# 1. SSH into your new homelab
+ssh admin@homelab.local
+
+# 2. View generated service passwords
+sudo cat /var/lib/nixnas-passwords.txt
+
+# 3. If your NAS IP isn't 192.168.1.100, update it:
+sudo nano /etc/nixos/hosts/homelab/default.nix
+sudo nixos-rebuild switch --flake /etc/nixos#homelab
+```
+
+### Phase 3: Configure OMV NAS
+
+On your OpenMediaVault NAS web UI:
+
+1. **Create shared folders** (Storage → Shared Folders):
+   - `media`, `downloads`, `documents`, `backups`, `nextcloud`, `syncthing`
+
+2. **Enable NFS** (Services → NFS → Settings)
+
+3. **Add NFS shares** for each folder:
+   - Client: `192.168.1.0/24` (your network range)
+   - Privilege: Read/Write
+   - Extra options: `subtree_check,insecure`
+
+4. Click Save and Apply
+
+### Phase 4: Set Up Encrypted Secrets (Optional)
+
+After your homelab is working, you can encrypt your service passwords:
+
+```bash
+sudo /etc/nixos/scripts/setup-sops.sh
+```
+
+This encrypts your passwords so you can safely commit them to git.
+
+---
+
+## Services
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| SSH | `ssh admin@homelab.local` | Remote access |
+| Home Assistant | http://homelab.local:8123 | Home automation |
+| Jellyfin | http://homelab.local:8096 | Media server |
+| Transmission | http://homelab.local:9091 | Torrent client |
+| Grafana | http://homelab.local:3000 | Monitoring dashboards |
+| Syncthing | http://homelab.local:8384 | File sync |
+| Nextcloud | http://homelab.local:8080 | Cloud storage |
+
+**Note**: Samba file sharing is on your OMV NAS, not the homelab.
+
+---
 
 ## Directory Structure
 
 ```
 nixnas/
-├── flake.nix                    # Main flake with all hosts
+├── flake.nix                    # Main flake configuration
 ├── hosts/
-│   ├── storage-node/            # Minimal NAS config (ZFS)
-│   │   └── default.nix
-│   └── homelab/                 # Full server config (NFS client)
-│       └── default.nix
+│   └── homelab/                 # Homelab host config
+│       ├── default.nix          # Main config (services, storage)
+│       └── hardware-configuration.nix
 ├── modules/                     # Shared NixOS modules
 │   ├── base/                    # Users, boot, nix settings
-│   ├── storage/                 # ZFS, NFS server, NFS client
+│   ├── storage/                 # NFS client configuration
 │   ├── security/                # SSH, firewall, fail2ban
-│   ├── networking/              # WireGuard
+│   ├── networking/              # WireGuard VPN
 │   ├── services/                # Jellyfin, Home Assistant, etc.
 │   ├── monitoring/              # Prometheus, Grafana
 │   └── development/             # Python, Node.js
-├── pi-gateway/                  # Separate flake for Pi images
-├── scripts/                     # Installation helpers
-│   ├── install.sh
-│   ├── prepare-usb.sh
-│   └── create-zfs-pool.sh
-└── secrets/                     # SOPS-encrypted secrets
+├── pi-gateway/                  # Raspberry Pi VPN gateway (separate)
+├── scripts/
+│   ├── install.sh               # Main installation script
+│   ├── prepare-usb.sh           # Partition target drive
+│   └── setup-sops.sh            # Set up encrypted secrets
+└── secrets/                     # SOPS-encrypted secrets (after setup)
 ```
+
+---
 
 ## Common Commands
 
@@ -240,11 +165,43 @@ df -h /mnt/nas/*
 
 # Restart a service
 sudo systemctl restart jellyfin
+
+# View generated passwords
+sudo cat /var/lib/nixnas-passwords.txt
+
+# Edit secrets (after SOPS setup)
+cd /etc/nixos && sops secrets/secrets.yaml
 ```
+
+---
+
+## WireGuard VPN
+
+WireGuard keys are automatically generated on first boot.
+
+```bash
+# View your server's public key
+cat /etc/wireguard/public.key
+
+# Add peers in /etc/nixos/hosts/homelab/default.nix:
+nixnas.wireguard.peers = [
+  {
+    name = "phone";
+    publicKey = "PEER_PUBLIC_KEY";
+    allowedIPs = [ "10.100.0.2/32" ];
+  }
+];
+
+# Then rebuild
+sudo nixos-rebuild switch --flake /etc/nixos#homelab
+```
+
+---
 
 ## Troubleshooting
 
 ### NFS mounts not working
+
 ```bash
 # Check if NAS is reachable
 ping 192.168.1.100  # your NAS IP
@@ -257,15 +214,25 @@ sudo mount -t nfs 192.168.1.100:/srv/media /mnt/test
 ```
 
 ### Can't SSH after install
-- Check if homelab is on network (look at console for IP)
-- Verify SSH key was added correctly to `modules/base/users.nix`
-- Try: `ssh -v admin@IP_ADDRESS` for verbose output
+
+- Verify SSH key was added to `modules/base/users.nix`
+- Check homelab IP on console/monitor
+- Try: `ssh -v admin@IP_ADDRESS`
 
 ### Service not starting
+
 ```bash
 systemctl status servicename
 journalctl -u servicename -n 50
 ```
+
+### View generated passwords
+
+```bash
+sudo cat /var/lib/nixnas-passwords.txt
+```
+
+---
 
 ## License
 

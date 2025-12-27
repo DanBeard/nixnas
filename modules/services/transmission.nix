@@ -129,19 +129,26 @@ in
         scrape-paused-torrents-enabled = true;
       };
 
-      # Credentials file for RPC password
-      credentialsFile = config.sops.secrets."transmission/credentials".path;
+      # Credentials file for RPC password (generated on first boot)
+      credentialsFile = "/var/lib/transmission/credentials.json";
     };
 
-    # Sops secret for credentials
-    sops.secrets."transmission/credentials" = {
-      owner = "transmission";
-      group = "transmission";
-      mode = "0400";
-    };
+    # Generate credentials on first boot if they don't exist
+    system.activationScripts.transmission-credentials = ''
+      CREDS_FILE="/var/lib/transmission/credentials.json"
+      if [ ! -f "$CREDS_FILE" ]; then
+        echo "Generating Transmission RPC credentials..."
+        mkdir -p /var/lib/transmission
+        PASSWORD=$(${pkgs.openssl}/bin/openssl rand -base64 16 | tr -d '/+=' | head -c 16)
+        echo "{\"rpc-password\": \"$PASSWORD\"}" > "$CREDS_FILE"
+        chmod 600 "$CREDS_FILE"
+        chown transmission:transmission "$CREDS_FILE"
 
-    # Add admin to transmission group for file access
-    users.users.admin.extraGroups = mkAfter [ "transmission" ];
+        # Save password to summary file
+        echo "Transmission RPC - User: transmission, Password: $PASSWORD" >> /var/lib/nixnas-passwords.txt
+        chmod 600 /var/lib/nixnas-passwords.txt
+      fi
+    '';
 
     # Ensure directories exist
     systemd.tmpfiles.rules = [

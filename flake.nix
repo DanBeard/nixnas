@@ -1,5 +1,5 @@
 {
-  description = "NixNAS - Multi-host NixOS configurations for home infrastructure";
+  description = "NixNAS - Homelab NixOS configuration with OpenMediaVault NAS storage";
 
   inputs = {
     # NixOS 24.11 stable
@@ -58,22 +58,13 @@
 
       nixosConfigurations = {
         # -------------------------------------------------------------------------
-        # storage-node: Minimal NAS for memory-constrained hardware (QNAP, 1GB RAM)
-        # Only provides: ZFS storage, Samba/NFS file sharing, SSH
-        # -------------------------------------------------------------------------
-        storage-node = nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = baseModules ++ [
-            ./hosts/storage-node
-          ];
-        };
-
-        # -------------------------------------------------------------------------
         # homelab: Full-featured server with all services
         # Requires: 4GB+ RAM, decent CPU
         # Provides: Jellyfin, Home Assistant, Docker, Nextcloud, WireGuard, etc.
-        # NOTE: Add sops-nix.nixosModules.sops to modules list after configuring secrets
+        # Uses NFS to mount storage from OpenMediaVault NAS
+        #
+        # To enable SOPS secrets (after running setup-sops.sh):
+        #   Add sops-nix.nixosModules.sops to modules list below
         # -------------------------------------------------------------------------
         homelab = nixpkgs.lib.nixosSystem {
           inherit system;

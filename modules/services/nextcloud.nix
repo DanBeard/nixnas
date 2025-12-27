@@ -59,7 +59,7 @@ in
 
         # Admin user
         adminuser = "admin";
-        adminpassFile = config.sops.secrets."nextcloud/admin-password".path;
+        adminpassFile = "/var/lib/nextcloud-admin-pass";
       };
 
       # PHP settings
@@ -119,12 +119,21 @@ in
     # Open firewall port
     networking.firewall.allowedTCPPorts = [ cfg.httpPort ];
 
-    # Secrets
-    sops.secrets."nextcloud/admin-password" = {
-      owner = "nextcloud";
-      group = "nextcloud";
-      mode = "0400";
-    };
+    # Generate admin password on first boot if it doesn't exist
+    system.activationScripts.nextcloud-admin-pass = ''
+      PASS_FILE="/var/lib/nextcloud-admin-pass"
+      if [ ! -f "$PASS_FILE" ]; then
+        echo "Generating Nextcloud admin password..."
+        PASSWORD=$(${pkgs.openssl}/bin/openssl rand -base64 16 | tr -d '/+=' | head -c 16)
+        echo -n "$PASSWORD" > "$PASS_FILE"
+        chmod 600 "$PASS_FILE"
+        chown nextcloud:nextcloud "$PASS_FILE" 2>/dev/null || true
+
+        # Save password to summary file
+        echo "Nextcloud - User: admin, Password: $PASSWORD" >> /var/lib/nixnas-passwords.txt
+        chmod 600 /var/lib/nixnas-passwords.txt
+      fi
+    '';
 
     # Ensure data directory exists
     systemd.tmpfiles.rules = [
