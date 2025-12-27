@@ -120,48 +120,45 @@ else
 fi
 
 # =============================================================================
-# Step 4: Create NFS mount points
+# Step 4: Create NFS mount point
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 4: Creating NFS mount directories...${NC}"
+echo -e "${GREEN}Step 4: Creating NFS mount directory...${NC}"
 
-mkdir -p /mnt/nas/{media,downloads,documents,backups,nextcloud,syncthing}
+mkdir -p /mnt/nas
 chmod 755 /mnt/nas
-chmod 755 /mnt/nas/*
 
-echo -e "  ${GREEN}✓${NC} Mount directories created"
+echo -e "  ${GREEN}✓${NC} Mount directory created"
 
 # =============================================================================
-# Step 5: Configure NFS mounts in fstab
+# Step 5: Configure NFS mount in fstab
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 5: Configuring NFS mounts...${NC}"
+echo -e "${GREEN}Step 5: Configuring NFS mount...${NC}"
 
 # Backup fstab
 cp /etc/fstab /etc/fstab.backup
 
-# Check if mounts already exist
-if grep -q "/mnt/nas/media" /etc/fstab; then
-    echo -e "  ${YELLOW}⚠${NC} NFS mounts already in fstab, skipping"
+# Check if mount already exists
+if grep -q "/mnt/nas" /etc/fstab; then
+    echo -e "  ${YELLOW}⚠${NC} NFS mount already in fstab, skipping"
 else
     cat >> /etc/fstab << EOF
 
-# NAS NFS Mounts (added by homelab setup)
-${NAS_IP}:/srv/media     /mnt/nas/media     nfs  defaults,_netdev,soft,timeo=100  0 0
-${NAS_IP}:/srv/downloads /mnt/nas/downloads nfs  defaults,_netdev,soft,timeo=100  0 0
-${NAS_IP}:/srv/documents /mnt/nas/documents nfs  defaults,_netdev,soft,timeo=100  0 0
-${NAS_IP}:/srv/backups   /mnt/nas/backups   nfs  defaults,_netdev,soft,timeo=100  0 0
-${NAS_IP}:/srv/nextcloud /mnt/nas/nextcloud nfs  defaults,_netdev,soft,timeo=100  0 0
-${NAS_IP}:/srv/syncthing /mnt/nas/syncthing nfs  defaults,_netdev,soft,timeo=100  0 0
+# NAS NFS Mount (added by homelab setup)
+# Single share - subdirectories created after mounting
+${NAS_IP}:/srv/homelab  /mnt/nas  nfs  defaults,_netdev,soft,timeo=100  0 0
 EOF
-    echo -e "  ${GREEN}✓${NC} NFS mounts added to /etc/fstab"
+    echo -e "  ${GREEN}✓${NC} NFS mount added to /etc/fstab"
 fi
 
 # =============================================================================
-# Step 6: Mount NFS shares (optional - skip if NAS not ready)
+# Step 6: Mount NFS share and create subdirectories
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 6: Mounting NFS shares...${NC}"
+echo -e "${GREEN}Step 6: Mounting NFS share...${NC}"
+
+NAS_MOUNTED=false
 
 echo "Testing connection to NAS at $NAS_IP..."
 if ping -c 1 -W 3 "$NAS_IP" &> /dev/null; then
@@ -173,21 +170,35 @@ if ping -c 1 -W 3 "$NAS_IP" &> /dev/null; then
         echo -e "  ${GREEN}✓${NC} NFS service is running"
         # Try to mount with a short timeout
         if timeout 10 mount -a 2>/dev/null; then
-            echo -e "  ${GREEN}✓${NC} NFS shares mounted"
+            echo -e "  ${GREEN}✓${NC} NFS share mounted"
+            NAS_MOUNTED=true
         else
-            echo -e "  ${YELLOW}⚠${NC} Could not mount NFS shares"
-            echo "    Make sure shares are configured in OMV"
+            echo -e "  ${YELLOW}⚠${NC} Could not mount NFS share"
+            echo "    Make sure /srv/homelab share is configured in OMV"
             echo "    You can mount manually later with: sudo mount -a"
         fi
     else
         echo -e "  ${YELLOW}⚠${NC} NFS service not available yet on NAS"
-        echo "    This is fine - NFS mounts are configured in /etc/fstab"
-        echo "    They will auto-mount on next boot, or run: sudo mount -a"
+        echo "    This is fine - NFS mount is configured in /etc/fstab"
+        echo "    It will auto-mount on next boot, or run: sudo mount -a"
     fi
 else
     echo -e "  ${YELLOW}⚠${NC} Cannot reach NAS at $NAS_IP"
-    echo "    NFS mounts are configured but not mounted"
+    echo "    NFS mount is configured but not mounted"
     echo "    After NAS is ready, run: sudo mount -a"
+fi
+
+# Create subdirectories if NAS is mounted
+if [ "$NAS_MOUNTED" = true ]; then
+    echo ""
+    echo -e "${GREEN}Creating NAS subdirectories...${NC}"
+    mkdir -p /mnt/nas/{media,downloads,documents,backups,nextcloud,syncthing}
+    # Set ownership to match PUID/PGID from .env
+    chown -R "${PUID}:${PGID}" /mnt/nas/
+    echo -e "  ${GREEN}✓${NC} Subdirectories created: media, downloads, documents, backups, nextcloud, syncthing"
+else
+    echo -e "  ${CYAN}ℹ${NC}  Subdirectories will be created when NAS is mounted"
+    echo "    After mounting, run: sudo mkdir -p /mnt/nas/{media,downloads,documents,backups,nextcloud,syncthing}"
 fi
 
 echo -e "  ${CYAN}ℹ${NC}  Skipping NFS mount is OK - you can connect later"

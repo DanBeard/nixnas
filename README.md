@@ -107,18 +107,21 @@ NEXTCLOUD_ADMIN_PASS=...
 GRAFANA_ADMIN_PASS=...
 ```
 
-### NFS Mounts
+### NFS Mount
 
-The setup script adds these to `/etc/fstab`:
+The setup script mounts a single NFS share and creates subdirectories:
 
-| Local Path | NAS Path |
-|------------|----------|
-| /mnt/nas/media | /srv/media |
-| /mnt/nas/downloads | /srv/downloads |
-| /mnt/nas/documents | /srv/documents |
-| /mnt/nas/backups | /srv/backups |
-| /mnt/nas/nextcloud | /srv/nextcloud |
-| /mnt/nas/syncthing | /srv/syncthing |
+```
+NAS:/srv/homelab  →  /mnt/nas/
+                      ├── media/
+                      ├── downloads/
+                      ├── documents/
+                      ├── backups/
+                      ├── nextcloud/
+                      └── syncthing/
+```
+
+On your OMV NAS, create one shared folder (`/srv/homelab`) and export it via NFS.
 
 ### Directory Structure
 
@@ -262,17 +265,21 @@ docker compose exec jellyfin bash
 
 On your OpenMediaVault NAS:
 
-1. **Create shared folders** (Storage → Shared Folders):
-   - `media`, `downloads`, `documents`, `backups`, `nextcloud`, `syncthing`
+1. **Create a shared folder** (Storage → Shared Folders):
+   - Name: `homelab`
+   - Path will be `/srv/homelab`
 
 2. **Enable NFS** (Services → NFS → Settings → Enable)
 
-3. **Create NFS shares** for each folder:
+3. **Create NFS share** for the homelab folder:
+   - Shared folder: `homelab`
    - Client: `192.168.1.0/24` (your network)
    - Privilege: Read/Write
    - Extra options: `subtree_check,insecure,no_root_squash`
 
 4. Apply changes
+
+The setup script will create subdirectories (media, downloads, etc.) inside `/mnt/nas/` after mounting.
 
 ---
 
