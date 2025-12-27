@@ -1,0 +1,32 @@
+# Prometheus Configuration
+# Scrapes metrics from local services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter - system metrics (CPU, memory, disk, network)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Docker containers can expose metrics on various ports
+  # Uncomment and add as needed:
+
+  # Transmission (if you add metrics exporter)
+  # - job_name: 'transmission'
+  #   static_configs:
+  #     - targets: ['transmission-exporter:9190']
+
+  # Home Assistant
+  # - job_name: 'homeassistant'
+  #   metrics_path: /api/prometheus
+  #   bearer_token: 'YOUR_LONG_LIVED_ACCESS_TOKEN'
+  #   static_configs:
+  #     - targets: ['homeassistant:8123']

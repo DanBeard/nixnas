@@ -1,199 +1,268 @@
-# NixNAS - Homelab NixOS Configuration
+# Homelab - Docker Compose Setup
 
-A modular NixOS configuration for a homelab server using OpenMediaVault NAS for storage.
+A simple, portable homelab configuration using Docker Compose. Run your media server, home automation, cloud storage, and more on any Ubuntu Server.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Home Network                             │
+│                         Home Network                            │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────────────┐         ┌────────────────────────┐    │
-│  │  Homelab PC (NixOS)  │         │  OMV NAS               │    │
-│  │  i5, 16GB RAM, 256GB │◄───────►│  ext4 RAID             │    │
-│  │                      │  NFS    │                        │    │
-│  │  LOCAL (SSD):        │         │  Shared directories:   │    │
-│  │  • NixOS system      │         │  • media               │    │
-│  │  • Docker volumes    │         │  • downloads           │    │
-│  │  • Home Assistant    │         │  • documents           │    │
-│  │  • Jellyfin cache    │         │  • backups             │    │
-│  │                      │         │  • nextcloud           │    │
-│  │  NETWORK (/mnt/nas): │         │  • syncthing           │    │
-│  │  • Media library     │         │                        │    │
-│  │  • Downloads         │         │  Also provides:        │    │
-│  │  • Documents         │         │  • Samba file sharing  │    │
-│  │  • Backups           │         │                        │    │
-│  └──────────────────────┘         └────────────────────────┘    │
-│                                                                  │
+│                                                                 │
+│  ┌──────────────────────┐         ┌────────────────────────┐   │
+│  │  Homelab (Ubuntu)    │         │  OMV NAS               │   │
+│  │                      │◄───────►│                        │   │
+│  │  Docker Services:    │   NFS   │  Shared directories:   │   │
+│  │  • Jellyfin :8096    │         │  • media               │   │
+│  │  • Home Assistant    │         │  • downloads           │   │
+│  │    :8123             │         │  • documents           │   │
+│  │  • Transmission :9091│         │  • backups             │   │
+│  │  • Nextcloud :8080   │         │  • nextcloud           │   │
+│  │  • Syncthing :8384   │         │  • syncthing           │   │
+│  │  • Grafana :3000     │         │                        │   │
+│  │  • WireGuard :51820  │         │                        │   │
+│  └──────────────────────┘         └────────────────────────┘   │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
-### Phase 1: Install NixOS
+### 1. Install Ubuntu Server
 
-**Requirements**: PC with 4GB+ RAM, 64GB+ SSD/NVMe, NixOS installer USB
+Download and install [Ubuntu Server 24.04 LTS](https://ubuntu.com/download/server).
 
-```bash
-# 1. Boot from NixOS installer ISO
-
-# 2. Get networking (usually automatic with ethernet)
-
-# 3. Clone this repo
-nix-shell -p git
-git clone https://github.com/DanBeard/nixnas.git
-cd nixnas
-
-# 4. Add your SSH public key
-nano modules/base/users.nix
-# Find openssh.authorizedKeys.keys and add your key
-
-# 5. Set your OMV NAS IP address
-nano hosts/homelab/default.nix
-# Find nasAddress = "192.168.1.100" and change it
-
-# 6. Prepare your target drive (replace nvme0n1 with your drive)
-chmod +x scripts/*.sh
-sudo ./scripts/prepare-usb.sh /dev/nvme0n1
-
-# 7. Install
-sudo ./scripts/install.sh
-
-# 8. Reboot (remove installer USB first!)
-reboot
-```
-
-### Phase 2: First Login
+### 2. Clone and Configure
 
 ```bash
-# 1. SSH into your new homelab
-ssh admin@homelab.local
+# Clone this repo
+git clone https://github.com/DanBeard/homelab.git
+cd homelab
 
-# 2. View generated service passwords
-sudo cat /var/lib/nixnas-passwords.txt
+# Copy and edit the environment file
+cp .env.example .env
+nano .env
 
-# 3. If your NAS IP isn't 192.168.1.100, update it:
-sudo nano /etc/nixos/hosts/homelab/default.nix
-sudo nixos-rebuild switch --flake /etc/nixos#homelab
+# Set your NAS IP, timezone, and generate passwords:
+# openssl rand -base64 16
 ```
 
-### Phase 3: Configure OMV NAS
-
-On your OpenMediaVault NAS web UI:
-
-1. **Create shared folders** (Storage → Shared Folders):
-   - `media`, `downloads`, `documents`, `backups`, `nextcloud`, `syncthing`
-
-2. **Enable NFS** (Services → NFS → Settings)
-
-3. **Add NFS shares** for each folder:
-   - Client: `192.168.1.0/24` (your network range)
-   - Privilege: Read/Write
-   - Extra options: `subtree_check,insecure`
-
-4. Click Save and Apply
-
-### Phase 4: Set Up Encrypted Secrets (Optional)
-
-After your homelab is working, you can encrypt your service passwords:
+### 3. Run Setup Script
 
 ```bash
-sudo /etc/nixos/scripts/setup-sops.sh
+chmod +x scripts/setup.sh
+sudo ./scripts/setup.sh
 ```
 
-This encrypts your passwords so you can safely commit them to git.
+This will:
+- Install Docker
+- Install NFS client
+- Mount your NAS shares
+- Create config directories
+
+### 4. Start Services
+
+```bash
+# Log out and back in first (for docker group)
+docker compose up -d
+```
+
+### 5. Access Your Services
+
+| Service | URL | Default Login |
+|---------|-----|---------------|
+| Jellyfin | http://homelab:8096 | Create on first visit |
+| Home Assistant | http://homelab:8123 | Create on first visit |
+| Transmission | http://homelab:9091 | From .env file |
+| Nextcloud | http://homelab:8080 | admin / from .env |
+| Syncthing | http://homelab:8384 | Create on first visit |
+| Grafana | http://homelab:3000 | admin / from .env |
+
+---
+
+## Configuration
+
+### Environment Variables
+
+All configuration is in `.env`. Key settings:
+
+```bash
+# Your NAS IP
+NAS_IP=192.168.1.100
+
+# Timezone
+TZ=America/Los_Angeles
+
+# WireGuard VPN
+WG_SERVERURL=vpn.yourdomain.com
+WG_PEERS=phone,laptop
+
+# Service passwords
+TRANSMISSION_PASS=...
+NEXTCLOUD_ADMIN_PASS=...
+GRAFANA_ADMIN_PASS=...
+```
+
+### NFS Mounts
+
+The setup script adds these to `/etc/fstab`:
+
+| Local Path | NAS Path |
+|------------|----------|
+| /mnt/nas/media | /srv/media |
+| /mnt/nas/downloads | /srv/downloads |
+| /mnt/nas/documents | /srv/documents |
+| /mnt/nas/backups | /srv/backups |
+| /mnt/nas/nextcloud | /srv/nextcloud |
+| /mnt/nas/syncthing | /srv/syncthing |
+
+### Directory Structure
+
+```
+homelab/
+├── docker-compose.yml      # All services
+├── .env                    # Your configuration
+├── .env.example            # Template
+├── config/                 # Container configs (auto-created)
+│   ├── jellyfin/
+│   ├── homeassistant/
+│   ├── transmission/
+│   ├── nextcloud/
+│   ├── syncthing/
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   └── wireguard/
+└── scripts/
+    └── setup.sh
+```
 
 ---
 
 ## Services
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| SSH | `ssh admin@homelab.local` | Remote access |
-| Home Assistant | http://homelab.local:8123 | Home automation |
-| Jellyfin | http://homelab.local:8096 | Media server |
-| Transmission | http://homelab.local:9091 | Torrent client |
-| Grafana | http://homelab.local:3000 | Monitoring dashboards |
-| Syncthing | http://homelab.local:8384 | File sync |
-| Nextcloud | http://homelab.local:8080 | Cloud storage |
+### Jellyfin (Media Server)
 
-**Note**: Samba file sharing is on your OMV NAS, not the homelab.
+Stream your movies, TV shows, and music.
 
----
+- **Port**: 8096
+- **Media location**: `/mnt/nas/media` (read-only)
+- **Config**: `./config/jellyfin/`
 
-## Directory Structure
+For hardware transcoding (Intel Quick Sync), uncomment the `devices` section in docker-compose.yml.
 
-```
-nixnas/
-├── flake.nix                    # Main flake configuration
-├── hosts/
-│   └── homelab/                 # Homelab host config
-│       ├── default.nix          # Main config (services, storage)
-│       └── hardware-configuration.nix
-├── modules/                     # Shared NixOS modules
-│   ├── base/                    # Users, boot, nix settings
-│   ├── storage/                 # NFS client configuration
-│   ├── security/                # SSH, firewall, fail2ban
-│   ├── networking/              # WireGuard VPN
-│   ├── services/                # Jellyfin, Home Assistant, etc.
-│   ├── monitoring/              # Prometheus, Grafana
-│   └── development/             # Python, Node.js
-├── pi-gateway/                  # Raspberry Pi VPN gateway (separate)
-├── scripts/
-│   ├── install.sh               # Main installation script
-│   ├── prepare-usb.sh           # Partition target drive
-│   └── setup-sops.sh            # Set up encrypted secrets
-└── secrets/                     # SOPS-encrypted secrets (after setup)
-```
+### Home Assistant (Home Automation)
+
+Control your smart home devices.
+
+- **Port**: 8123
+- **Config**: `./config/homeassistant/`
+
+For USB devices (Zigbee/Z-Wave), uncomment the `privileged` and `devices` sections.
+
+### Transmission (Torrents)
+
+Download torrents with web UI.
+
+- **Web UI**: 9091
+- **Peer port**: 51413
+- **Downloads**: `/mnt/nas/downloads/`
+- **Watch folder**: `/mnt/nas/downloads/watch/`
+
+### Nextcloud (Cloud Storage)
+
+Self-hosted Dropbox alternative.
+
+- **Port**: 8080
+- **Data**: `/mnt/nas/nextcloud/`
+- **Database**: SQLite (simple setup)
+
+### Syncthing (File Sync)
+
+Sync files between devices.
+
+- **Web UI**: 8384
+- **Sync ports**: 22000, 21027
+- **Data**: `/mnt/nas/syncthing/`
+
+### Monitoring (Prometheus + Grafana)
+
+System monitoring and dashboards.
+
+- **Grafana**: 3000 (dashboards)
+- **Prometheus**: 9090 (metrics)
+- **Node Exporter**: 9100 (system metrics)
+
+After starting, add Prometheus as a data source in Grafana:
+1. Go to Grafana → Connections → Data Sources
+2. Add Prometheus with URL: `http://prometheus:9090`
+
+### WireGuard (VPN)
+
+Secure remote access to your homelab.
+
+- **Port**: 51820/UDP
+- **Peer configs**: `./config/wireguard/peer_*/`
+
+After first start, find your peer configs and scan the QR codes with the WireGuard mobile app.
 
 ---
 
 ## Common Commands
 
 ```bash
-# Update system after config changes
-sudo nixos-rebuild switch --flake /etc/nixos#homelab
+# Start all services
+docker compose up -d
 
-# View service logs
-journalctl -u home-assistant -f
-journalctl -u jellyfin -f
+# Stop all services
+docker compose down
 
-# Check NFS mounts
-mount | grep nfs
-df -h /mnt/nas/*
+# View logs
+docker compose logs -f
+docker compose logs -f jellyfin
 
 # Restart a service
-sudo systemctl restart jellyfin
+docker compose restart jellyfin
 
-# View generated passwords
-sudo cat /var/lib/nixnas-passwords.txt
+# Update all containers
+docker compose pull
+docker compose up -d
 
-# Edit secrets (after SOPS setup)
-cd /etc/nixos && sops secrets/secrets.yaml
+# Check container status
+docker compose ps
+
+# Shell into a container
+docker compose exec jellyfin bash
 ```
 
 ---
 
-## WireGuard VPN
+## OMV NAS Setup
 
-WireGuard keys are automatically generated on first boot.
+On your OpenMediaVault NAS:
 
+1. **Create shared folders** (Storage → Shared Folders):
+   - `media`, `downloads`, `documents`, `backups`, `nextcloud`, `syncthing`
+
+2. **Enable NFS** (Services → NFS → Settings → Enable)
+
+3. **Create NFS shares** for each folder:
+   - Client: `192.168.1.0/24` (your network)
+   - Privilege: Read/Write
+   - Extra options: `subtree_check,insecure,no_root_squash`
+
+4. Apply changes
+
+---
+
+## Backup
+
+Your important data is on the NAS. The homelab just runs the services.
+
+To backup container configs:
 ```bash
-# View your server's public key
-cat /etc/wireguard/public.key
-
-# Add peers in /etc/nixos/hosts/homelab/default.nix:
-nixnas.wireguard.peers = [
-  {
-    name = "phone";
-    publicKey = "PEER_PUBLIC_KEY";
-    allowedIPs = [ "10.100.0.2/32" ];
-  }
-];
-
-# Then rebuild
-sudo nixos-rebuild switch --flake /etc/nixos#homelab
+tar -czf homelab-config-backup.tar.gz config/
+# Copy to NAS
+cp homelab-config-backup.tar.gz /mnt/nas/backups/
 ```
 
 ---
@@ -204,32 +273,34 @@ sudo nixos-rebuild switch --flake /etc/nixos#homelab
 
 ```bash
 # Check if NAS is reachable
-ping 192.168.1.100  # your NAS IP
+ping $NAS_IP
 
 # Check NFS exports on NAS
-showmount -e 192.168.1.100
+showmount -e $NAS_IP
 
-# Manually test mount
-sudo mount -t nfs 192.168.1.100:/srv/media /mnt/test
+# Manually mount to test
+sudo mount -t nfs $NAS_IP:/srv/media /mnt/nas/media
+
+# Check mount status
+df -h /mnt/nas/*
 ```
 
-### Can't SSH after install
-
-- Verify SSH key was added to `modules/base/users.nix`
-- Check homelab IP on console/monitor
-- Try: `ssh -v admin@IP_ADDRESS`
-
-### Service not starting
+### Container not starting
 
 ```bash
-systemctl status servicename
-journalctl -u servicename -n 50
+# Check logs
+docker compose logs servicename
+
+# Check if ports are in use
+sudo ss -tlnp | grep 8096
 ```
 
-### View generated passwords
+### Permission issues
 
+Make sure PUID/PGID in `.env` match your user:
 ```bash
-sudo cat /var/lib/nixnas-passwords.txt
+id
+# Use the uid and gid values
 ```
 
 ---

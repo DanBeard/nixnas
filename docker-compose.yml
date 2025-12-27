@@ -1,0 +1,194 @@
+# =============================================================================
+# Homelab Docker Compose Configuration
+# =============================================================================
+# All-in-one homelab setup with media server, home automation, cloud storage,
+# file sync, monitoring, and VPN.
+#
+# Usage:
+#   1. Copy .env.example to .env and configure
+#   2. Run: docker compose up -d
+#   3. Access services at http://homelab:<port>
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # MEDIA SERVER
+  # ===========================================================================
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/jellyfin:/config
+      - /mnt/nas/media:/media:ro
+    ports:
+      - "8096:8096"
+    # Hardware acceleration (Intel Quick Sync) - uncomment if needed
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+  # ===========================================================================
+  # HOME AUTOMATION
+  # ===========================================================================
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/homeassistant:/config
+    ports:
+      - "8123:8123"
+    # For USB devices (Zigbee/Z-Wave sticks), uncomment:
+    # privileged: true
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+
+  # ===========================================================================
+  # TORRENTS
+  # ===========================================================================
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
+    volumes:
+      - ./config/transmission:/config
+      - /mnt/nas/downloads:/downloads
+      - /mnt/nas/downloads/watch:/watch
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+
+  # ===========================================================================
+  # CLOUD STORAGE
+  # ===========================================================================
+  nextcloud:
+    image: nextcloud:stable
+    container_name: nextcloud
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SQLITE_DATABASE=nextcloud
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS}
+    volumes:
+      - ./config/nextcloud:/var/www/html
+      - /mnt/nas/nextcloud:/var/www/html/data
+    ports:
+      - "8080:80"
+
+  # ===========================================================================
+  # FILE SYNC
+  # ===========================================================================
+  syncthing:
+    image: syncthing/syncthing:latest
+    container_name: syncthing
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/syncthing:/var/syncthing/config
+      - /mnt/nas/syncthing:/var/syncthing/data
+    ports:
+      - "8384:8384"   # Web UI
+      - "22000:22000/tcp"  # TCP file transfers
+      - "22000:22000/udp"  # QUIC file transfers
+      - "21027:21027/udp"  # Receive local discovery broadcasts
+
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASS}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  # ===========================================================================
+  # VPN
+  # ===========================================================================
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SERVERURL=${WG_SERVERURL}
+      - SERVERPORT=${WG_SERVERPORT:-51820}
+      - PEERS=${WG_PEERS}
+      - PEERDNS=auto
+      - INTERNAL_SUBNET=10.100.0.0
+      - ALLOWEDIPS=0.0.0.0/0
+    volumes:
+      - ./config/wireguard:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  prometheus_data:
+  grafana_data:
