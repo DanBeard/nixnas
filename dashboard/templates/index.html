@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Homelab Dashboard{% endblock %}
+
+{% block content %}
+<section class="stats-section">
+    <h2><i class="fas fa-chart-bar"></i> System Status</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">CPU Usage</span>
+                <span class="stat-value">{{ stats.cpu if stats.cpu is not none else '--' }}%</span>
+            </div>
+            {% if stats.cpu is not none %}
+            <div class="stat-bar">
+                <div class="stat-bar-fill" style="width: {{ stats.cpu }}%; background: {{ '#22c55e' if stats.cpu < 70 else '#f59e0b' if stats.cpu < 90 else '#ef4444' }};"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-memory"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Memory Usage</span>
+                <span class="stat-value">{{ stats.memory if stats.memory is not none else '--' }}%</span>
+                {% if stats.memory_total_gb %}<span class="stat-detail">of {{ stats.memory_total_gb }} GB</span>{% endif %}
+            </div>
+            {% if stats.memory is not none %}
+            <div class="stat-bar">
+                <div class="stat-bar-fill" style="width: {{ stats.memory }}%; background: {{ '#22c55e' if stats.memory < 70 else '#f59e0b' if stats.memory < 90 else '#ef4444' }};"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-hard-drive"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Disk Usage</span>
+                <span class="stat-value">{{ stats.disk if stats.disk is not none else '--' }}%</span>
+                {% if stats.disk_total_gb %}<span class="stat-detail">of {{ stats.disk_total_gb }} GB</span>{% endif %}
+            </div>
+            {% if stats.disk is not none %}
+            <div class="stat-bar">
+                <div class="stat-bar-fill" style="width: {{ stats.disk }}%; background: {{ '#22c55e' if stats.disk < 70 else '#f59e0b' if stats.disk < 90 else '#ef4444' }};"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Uptime</span>
+                <span class="stat-value">{{ stats.uptime if stats.uptime else '--' }}</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="services-section">
+    <h2><i class="fas fa-th-large"></i> Services</h2>
+    <div class="services-grid">
+        {% for service in services %}
+        <a href="{{ service.url }}" class="service-card" style="--accent-color: {{ service.color }}" target="_blank">
+            <div class="service-icon">
+                <i class="fas fa-{{ service.icon }}"></i>
+            </div>
+            <div class="service-info">
+                <h3>{{ service.name }}</h3>
+                <p>{{ service.desc }}</p>
+                <span class="service-port">:{{ service.port }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}macOS WireGuard Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/wireguard" class="back-link"><i class="fas fa-arrow-left"></i> Back to WireGuard</a>
+
+    <h1><i class="fab fa-apple"></i> macOS Setup</h1>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Install WireGuard</h3>
+                <p><strong>Option A - App Store (Recommended):</strong></p>
+                <p>Download <a href="https://apps.apple.com/us/app/wireguard/id1451685025" target="_blank">WireGuard from the Mac App Store</a>.</p>
+                <p><strong>Option B - Homebrew:</strong></p>
+                <code>brew install wireguard-tools</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Get Your Configuration</h3>
+                <p>Copy the config file from your homelab server:</p>
+                <code>scp admin@homelab:~/homelab/config/wireguard/peer_macbook/peer_macbook.conf ~/Desktop/</code>
+                <p>Or use the QR code method (if using the App Store version).</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Import Configuration (App Store Version)</h3>
+                <ol>
+                    <li>Open the WireGuard app from your menu bar</li>
+                    <li>Click <strong>"Import Tunnel(s) from File..."</strong></li>
+                    <li>Select your <code>.conf</code> file</li>
+                    <li>Click <strong>"Allow"</strong> when prompted to add VPN configuration</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Import Configuration (Homebrew Version)</h3>
+                <code>sudo mkdir -p /etc/wireguard</code>
+                <code>sudo cp ~/Desktop/peer_macbook.conf /etc/wireguard/homelab.conf</code>
+                <code>sudo chmod 600 /etc/wireguard/homelab.conf</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>Connect</h3>
+                <p><strong>App Store version:</strong> Click the WireGuard menu bar icon and toggle your tunnel on.</p>
+                <p><strong>Homebrew version:</strong></p>
+                <code>sudo wg-quick up homelab</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">6</div>
+            <div class="step-content">
+                <h3>Test Connection</h3>
+                <p>Open a browser and navigate to:</p>
+                <code>http://10.100.0.1</code>
+                <p>You should see this dashboard!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-lightbulb"></i> Tips</h3>
+        <ul>
+            <li>The App Store version is easier to use and integrates with macOS better</li>
+            <li>Enable "On-Demand" in tunnel settings to auto-connect when leaving home</li>
+            <li>Server endpoint: <code>{{ wg_server }}:{{ wg_port }}</code></li>
+        </ul>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-terminal"></i> Homebrew Commands</h3>
+        <code>sudo wg-quick up homelab    # Connect</code>
+        <code>sudo wg-quick down homelab  # Disconnect</code>
+        <code>sudo wg show                # Show status</code>
+    </div>
+</section>
+{% endblock %}

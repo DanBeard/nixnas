@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Android WireGuard Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/wireguard" class="back-link"><i class="fas fa-arrow-left"></i> Back to WireGuard</a>
+
+    <h1><i class="fab fa-android"></i> Android Setup</h1>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Install WireGuard App</h3>
+                <p>Download WireGuard from the <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" target="_blank">Google Play Store</a>.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Get Your Configuration</h3>
+                <p>On your homelab server, navigate to your peer's config directory:</p>
+                <code>cd ~/homelab/config/wireguard/peer_phone/</code>
+                <p>You'll find:</p>
+                <ul>
+                    <li><code>peer_phone.conf</code> - Configuration file</li>
+                    <li><code>peer_phone.png</code> - QR code image</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Import via QR Code (Easiest)</h3>
+                <p>Display the QR code in your terminal:</p>
+                <code>docker compose exec wireguard /app/show-peer phone</code>
+                <p>Then in the WireGuard app:</p>
+                <ol>
+                    <li>Tap the <strong>+</strong> button</li>
+                    <li>Select <strong>"Scan from QR code"</strong></li>
+                    <li>Point your camera at the terminal</li>
+                    <li>Name the tunnel (e.g., "Homelab")</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Alternative: Import Config File</h3>
+                <p>If the QR code doesn't work:</p>
+                <ol>
+                    <li>Copy <code>peer_phone.conf</code> to your phone</li>
+                    <li>In WireGuard app, tap <strong>+</strong></li>
+                    <li>Select <strong>"Import from file or archive"</strong></li>
+                    <li>Browse to the .conf file</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>Connect</h3>
+                <p>Toggle the connection on in the WireGuard app. You should now be able to access your homelab services!</p>
+                <p>Try accessing:</p>
+                <code>http://10.100.0.1</code>
+                <p>This is the dashboard you're looking at now, but through the VPN.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-lightbulb"></i> Tips</h3>
+        <ul>
+            <li>Enable "On-Demand" activation to auto-connect when away from home WiFi</li>
+            <li>Your peer name is configured in <code>.env</code> under <code>WG_PEERS</code></li>
+            <li>Server endpoint: <code>{{ wg_server }}:{{ wg_port }}</code></li>
+        </ul>
+    </div>
+</section>
+{% endblock %}

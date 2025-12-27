@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Linux WireGuard Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/wireguard" class="back-link"><i class="fas fa-arrow-left"></i> Back to WireGuard</a>
+
+    <h1><i class="fab fa-linux"></i> Linux Setup</h1>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Install WireGuard</h3>
+                <p><strong>Ubuntu/Debian:</strong></p>
+                <code>sudo apt update && sudo apt install wireguard</code>
+                <p><strong>Fedora:</strong></p>
+                <code>sudo dnf install wireguard-tools</code>
+                <p><strong>Arch:</strong></p>
+                <code>sudo pacman -S wireguard-tools</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Get Your Configuration</h3>
+                <p>Copy the config file from your homelab server:</p>
+                <code>scp admin@homelab:~/homelab/config/wireguard/peer_laptop/peer_laptop.conf ~/</code>
+                <p>Or display it and copy manually:</p>
+                <code>ssh admin@homelab "cat ~/homelab/config/wireguard/peer_laptop/peer_laptop.conf"</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Install Configuration</h3>
+                <p>Copy to the WireGuard directory:</p>
+                <code>sudo cp peer_laptop.conf /etc/wireguard/homelab.conf</code>
+                <code>sudo chmod 600 /etc/wireguard/homelab.conf</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Connect</h3>
+                <p><strong>Quick connect (temporary):</strong></p>
+                <code>sudo wg-quick up homelab</code>
+                <p><strong>Enable on boot (persistent):</strong></p>
+                <code>sudo systemctl enable --now wg-quick@homelab</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>Verify Connection</h3>
+                <p>Check the interface status:</p>
+                <code>sudo wg show</code>
+                <p>Test connectivity:</p>
+                <code>curl http://10.100.0.1/health</code>
+                <p>You should see: <code>{"status":"healthy"}</code></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-terminal"></i> Useful Commands</h3>
+        <code>sudo wg-quick up homelab    # Connect</code>
+        <code>sudo wg-quick down homelab  # Disconnect</code>
+        <code>sudo wg show                # Show status</code>
+        <code>sudo systemctl status wg-quick@homelab  # Service status</code>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-desktop"></i> GUI Options</h3>
+        <p>If you prefer a graphical interface:</p>
+        <ul>
+            <li><strong>GNOME:</strong> Network Manager has WireGuard support built-in</li>
+            <li><strong>KDE:</strong> Use the Network Manager applet or install <code>wireguard-tools</code></li>
+            <li><strong>Generic:</strong> <a href="https://github.com/WireGuard/wireguard-tools" target="_blank">wg-quick</a> works on all distros</li>
+        </ul>
+    </div>
+</section>
+{% endblock %}

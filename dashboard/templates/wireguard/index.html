@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}WireGuard Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <h1><i class="fas fa-shield-halved"></i> WireGuard VPN Setup</h1>
+
+    <p class="intro">
+        WireGuard provides secure remote access to your homelab from anywhere.
+        Choose your platform below for setup instructions.
+    </p>
+
+    <div class="platform-grid">
+        <a href="/wireguard/android" class="platform-card">
+            <i class="fab fa-android"></i>
+            <span>Android</span>
+        </a>
+        <a href="/wireguard/windows" class="platform-card">
+            <i class="fab fa-windows"></i>
+            <span>Windows</span>
+        </a>
+        <a href="/wireguard/linux" class="platform-card">
+            <i class="fab fa-linux"></i>
+            <span>Linux</span>
+        </a>
+        <a href="/wireguard/macos" class="platform-card">
+            <i class="fab fa-apple"></i>
+            <span>macOS</span>
+        </a>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-info-circle"></i> Where are my config files?</h3>
+        <p>
+            WireGuard peer configurations are automatically generated when the container starts.
+            Find them on your homelab server at:
+        </p>
+        <code>./config/wireguard/peer_&lt;name&gt;/peer_&lt;name&gt;.conf</code>
+        <p>
+            Each peer folder also contains a QR code image (<code>peer_&lt;name&gt;.png</code>) for easy mobile setup.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-terminal"></i> Show QR Code in Terminal</h3>
+        <p>
+            To display a peer's QR code directly in your terminal:
+        </p>
+        <code>docker compose exec wireguard /app/show-peer &lt;peer_name&gt;</code>
+        <p>
+            Replace <code>&lt;peer_name&gt;</code> with the peer name (e.g., <code>phone</code>, <code>laptop</code>).
+        </p>
+    </div>
+</section>
+{% endblock %}

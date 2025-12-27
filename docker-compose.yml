@@ -186,6 +186,30 @@ services:
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
 
+  # ===========================================================================
+  # DASHBOARD
+  # ===========================================================================
+  dashboard:
+    image: python:3.12-slim
+    container_name: dashboard
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             gunicorn --bind 0.0.0.0:80 --workers 2 --access-logfile - app:app"
+    environment:
+      - TZ=${TZ}
+      - PROMETHEUS_URL=http://prometheus:9090
+      - WG_SERVERURL=${WG_SERVERURL}
+      - WG_SERVERPORT=${WG_SERVERPORT:-51820}
+      - DASHBOARD_HOST=${DASHBOARD_HOST:-}
+    volumes:
+      - ./dashboard:/app:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - prometheus
+
 # =============================================================================
 # VOLUMES
 # =============================================================================

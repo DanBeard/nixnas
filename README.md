@@ -21,6 +21,7 @@ A simple, portable homelab configuration using Docker Compose. Run your media se
 │  │  • Syncthing :8384   │         │  • syncthing           │   │
 │  │  • Grafana :3000     │         │                        │   │
 │  │  • WireGuard :51820  │         │                        │   │
+│  │  • Dashboard :80     │         │                        │   │
 │  └──────────────────────┘         └────────────────────────┘   │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -71,12 +72,15 @@ docker compose up -d
 
 | Service | URL | Default Login |
 |---------|-----|---------------|
+| **Dashboard** | http://homelab | No login required |
 | Jellyfin | http://homelab:8096 | Create on first visit |
 | Home Assistant | http://homelab:8123 | Create on first visit |
 | Transmission | http://homelab:9091 | From .env file |
 | Nextcloud | http://homelab:8080 | admin / from .env |
 | Syncthing | http://homelab:8384 | Create on first visit |
 | Grafana | http://homelab:3000 | admin / from .env |
+
+The Dashboard is your homelab's landing page with links to all services, system stats, and WireGuard setup guides.
 
 ---
 
@@ -123,6 +127,11 @@ homelab/
 ├── docker-compose.yml      # All services
 ├── .env                    # Your configuration
 ├── .env.example            # Template
+├── dashboard/              # Dashboard Flask app
+│   ├── app.py
+│   ├── requirements.txt
+│   ├── static/css/
+│   └── templates/
 ├── config/                 # Container configs (auto-created)
 │   ├── jellyfin/
 │   ├── homeassistant/
@@ -139,6 +148,19 @@ homelab/
 ---
 
 ## Services
+
+### Dashboard (Landing Page)
+
+Central hub for your homelab with service links and system stats.
+
+- **Port**: 80
+- **Features**:
+  - Links to all services
+  - Real-time system stats (CPU, RAM, Disk, Uptime)
+  - WireGuard setup guides for Android, Windows, Linux, macOS
+- **Config**: `./dashboard/` (Flask app)
+
+No login required - designed for trusted LAN/VPN access.
 
 ### Jellyfin (Media Server)
 
