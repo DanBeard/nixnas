@@ -12,6 +12,28 @@
 
 services:
   # ===========================================================================
+  # DATABASE (shared PostgreSQL)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-homelab}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - TZ=${TZ}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homelab}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
   # MEDIA SERVER
   # ===========================================================================
   jellyfin:
@@ -79,18 +101,23 @@ services:
     container_name: nextcloud
     restart: unless-stopped
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
       - TZ=${TZ}
-      - SQLITE_DATABASE=nextcloud
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=${POSTGRES_USER:-homelab}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}
       - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS}
+      - NEXTCLOUD_DATA_DIR=/data
     volumes:
-      - ./config/nextcloud:/var/www/html
-      - /mnt/nas/nextcloud:/var/www/html/data
+      - nextcloud_app:/var/www/html
+      - /mnt/nas/nextcloud:/data
     ports:
       - "8080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ===========================================================================
   # FILE SYNC
@@ -235,5 +262,7 @@ services:
 # VOLUMES
 # =============================================================================
 volumes:
+  postgres_data:
+  nextcloud_app:
   prometheus_data:
   grafana_data:
