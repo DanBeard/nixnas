@@ -1,0 +1,93 @@
+# =============================================================================
+# Reticulum Configuration
+# =============================================================================
+# This config connects to public backbone nodes for internet-based mesh access.
+# Your identity will be auto-generated on first run and saved to ./identity
+#
+# For LoRa radio interfaces, see: https://reticulum.network/manual/interfaces.html
+# =============================================================================
+
+[reticulum]
+  # Enable transport mode to help route packets for the network
+  enable_transport = True
+
+  # Share your instance as a discoverable node
+  share_instance = Yes
+
+  # Allow remote management (disabled for security)
+  remote_management_enabled = False
+
+  # Panic on unrecoverable errors
+  panic_on_interface_error = No
+
+[logging]
+  loglevel = 4
+
+# =============================================================================
+# BACKBONE INTERFACES
+# =============================================================================
+# These connect you to the wider Reticulum network via the internet.
+# Multiple interfaces provide redundancy - if one is down, others work.
+
+[[Chicago Nomad Net]]
+  type = TCPClientInterface
+  enabled = yes
+  target_host = rns.chicagonomad.net
+  target_port = 4242
+
+[[Noderage]]
+  type = TCPClientInterface
+  enabled = yes
+  target_host = rns.noderage.org
+  target_port = 4242
+
+[[Faultline]]
+  type = TCPClientInterface
+  enabled = yes
+  target_host = rns.faultline.dev
+  target_port = 4242
+
+# =============================================================================
+# I2P INTERFACES (Anonymous Connectivity)
+# =============================================================================
+# Connects via i2pd SAM bridge for anonymous mesh networking.
+# Note: i2pd takes 10-30 minutes to bootstrap on first start.
+
+[[I2P Chicago Nomad]]
+  type = I2PInterface
+  enabled = yes
+  peers = fgtqx3pgwyd3bjcq4ojes47j7ynnw72luf2g3jeguhf5bbzkcuhq.b32.i2p
+
+[[I2P Noderage]]
+  type = I2PInterface
+  enabled = yes
+  peers = hm2arylcoexb5h3y6kbgy776dfsqkl4tzb72foly2emdldhjbtq.b32.i2p
+
+# =============================================================================
+# OPTIONAL: LOCAL INTERFACES
+# =============================================================================
+# Uncomment for local network discovery (finds other Reticulum nodes on LAN)
+
+# [[Local UDP]]
+#   type = UDPInterface
+#   enabled = no
+#   listen_ip = 0.0.0.0
+#   listen_port = 4242
+#   forward_ip = 255.255.255.255
+#   forward_port = 4242
+
+# =============================================================================
+# OPTIONAL: LORA RADIO INTERFACE (RNode)
+# =============================================================================
+# Uncomment and configure for LoRa mesh connectivity via RNode hardware.
+# Also uncomment 'devices' section in docker-compose.yml
+
+# [[RNode LoRa]]
+#   type = RNodeInterface
+#   enabled = no
+#   port = /dev/ttyUSB0
+#   frequency = 914875000
+#   bandwidth = 125000
+#   txpower = 14
+#   spreadingfactor = 8
+#   codingrate = 5

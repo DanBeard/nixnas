@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}SSH Tunnel Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <h1><i class="fas fa-terminal"></i> SSH Tunnel Access</h1>
+
+    <p class="intro">
+        Some services (like the i2pd web console) are bound to localhost for security.
+        Use an SSH tunnel to access them securely from your local machine.
+    </p>
+
+    <div class="platform-grid">
+        <a href="/ssh-tunnel/linux" class="platform-card">
+            <i class="fab fa-linux"></i>
+            <span>Linux</span>
+        </a>
+        <a href="/ssh-tunnel/macos" class="platform-card">
+            <i class="fab fa-apple"></i>
+            <span>macOS</span>
+        </a>
+        <a href="/ssh-tunnel/windows" class="platform-card">
+            <i class="fab fa-windows"></i>
+            <span>Windows</span>
+        </a>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-lock"></i> Why SSH Tunnels?</h3>
+        <p>
+            SSH tunnels provide secure, encrypted access to services that are intentionally
+            not exposed to the network. This is more secure than opening ports directly.
+        </p>
+        <p>
+            When you create a tunnel, your local machine connects through SSH and forwards
+            a local port to the remote service.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-server"></i> Services Requiring Tunnels</h3>
+        <table class="tunnel-table">
+            <tr>
+                <th>Service</th>
+                <th>Remote Port</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>i2pd Console</td>
+                <td>7070</td>
+                <td>I2P router status and configuration</td>
+            </tr>
+        </table>
+    </div>
+</section>
+{% endblock %}

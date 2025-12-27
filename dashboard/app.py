@@ -19,8 +19,10 @@ SERVICES = [
     {'name': 'Transmission', 'port': 9091, 'icon': 'download', 'desc': 'Torrent Client', 'color': '#b50d0d'},
     {'name': 'Nextcloud', 'port': 8080, 'icon': 'cloud', 'desc': 'Cloud Storage', 'color': '#0082c9'},
     {'name': 'Syncthing', 'port': 8384, 'icon': 'sync', 'desc': 'File Sync', 'color': '#0891d1'},
+    {'name': 'MeshChat', 'port': 8000, 'icon': 'comments', 'desc': 'Mesh Network Chat', 'color': '#6366f1'},
     {'name': 'Grafana', 'port': 3000, 'icon': 'chart-line', 'desc': 'Monitoring Dashboards', 'color': '#f46800'},
     {'name': 'Prometheus', 'port': 9090, 'icon': 'database', 'desc': 'Metrics Store', 'color': '#e6522c'},
+    {'name': 'i2pd Console', 'port': 7070, 'icon': 'user-secret', 'desc': 'I2P Router (SSH Tunnel)', 'color': '#9333ea', 'localhost_only': True},
 ]
 
 
@@ -97,10 +99,15 @@ def get_system_stats():
 def index():
     """Homepage with service links and system stats."""
     host = get_host()
-    services = [
-        {**s, 'url': f'http://{host}:{s["port"]}'}
-        for s in SERVICES
-    ]
+    services = []
+    for s in SERVICES:
+        service = {**s}
+        if s.get('localhost_only'):
+            # For localhost-only services, link to SSH tunnel guide
+            service['url'] = '/ssh-tunnel'
+        else:
+            service['url'] = f'http://{host}:{s["port"]}'
+        services.append(service)
     stats = get_system_stats()
     return render_template('index.html', services=services, stats=stats, host=host)
 
@@ -125,6 +132,30 @@ def wireguard_platform(platform):
         f'wireguard/{platform}.html',
         wg_server=wg_server,
         wg_port=wg_port
+    )
+
+
+@app.route('/ssh-tunnel')
+def ssh_tunnel():
+    """SSH tunnel setup overview."""
+    return render_template('ssh-tunnel/index.html')
+
+
+@app.route('/ssh-tunnel/<platform>')
+def ssh_tunnel_platform(platform):
+    """Platform-specific SSH tunnel setup instructions."""
+    valid_platforms = ['linux', 'macos', 'windows']
+    if platform not in valid_platforms:
+        return render_template('ssh-tunnel/index.html'), 404
+
+    # Get SSH connection info (user can customize via env)
+    ssh_host = os.getenv('SSH_HOST', 'homelab')
+    ssh_user = os.getenv('SSH_USER', 'admin')
+
+    return render_template(
+        f'ssh-tunnel/{platform}.html',
+        ssh_host=ssh_host,
+        ssh_user=ssh_user
     )
 
 

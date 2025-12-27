@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}macOS SSH Tunnel Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/ssh-tunnel" class="back-link"><i class="fas fa-arrow-left"></i> Back to SSH Tunnel</a>
+
+    <h1><i class="fab fa-apple"></i> macOS SSH Tunnel Setup</h1>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Open Terminal</h3>
+                <p>Launch Terminal from Applications > Utilities, or press <code>Cmd + Space</code> and type "Terminal".</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Create the Tunnel</h3>
+                <p>Run this command to create a tunnel to the i2pd web console:</p>
+                <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N</code>
+                <p>Leave this terminal window open while using the tunnel.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Access the Service</h3>
+                <p>Open Safari or your preferred browser and go to:</p>
+                <p><a href="http://127.0.0.1:7070" target="_blank">http://127.0.0.1:7070</a></p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Close the Tunnel</h3>
+                <p>Press <code>Ctrl + C</code> in the terminal window to close the tunnel.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-cog"></i> Persistent Configuration</h3>
+        <p>Add this to <code>~/.ssh/config</code> for easy access:</p>
+        <pre>Host homelab-tunnel
+    HostName {{ ssh_host }}
+    User {{ ssh_user }}
+    LocalForward 7070 127.0.0.1:7070</pre>
+        <p>Then simply run:</p>
+        <code>ssh homelab-tunnel -N</code>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-terminal"></i> Background Mode</h3>
+        <p>To run the tunnel in the background:</p>
+        <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N -f</code>
+        <p>To stop a background tunnel:</p>
+        <code>pkill -f "ssh -L 7070"</code>
+    </div>
+</section>
+{% endblock %}

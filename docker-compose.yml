@@ -229,6 +229,42 @@ services:
       - ./scripts/ddns.py:/app/ddns.py:ro
 
   # ===========================================================================
+  # I2P NETWORK (Anonymous Routing)
+  # ===========================================================================
+  i2pd:
+    image: purplei2p/i2pd:latest
+    container_name: i2pd
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/i2pd:/home/i2pd/data
+    ports:
+      - "127.0.0.1:7070:7070"   # Web console (localhost only)
+      - "4444:4444"             # HTTP proxy
+      - "7656:7656"             # SAM bridge (for Reticulum)
+    # Uncomment to improve connectivity (requires port forwarding):
+    # - "12345:12345"           # I2P transport port
+    # - "12345:12345/udp"
+
+  # ===========================================================================
+  # MESH NETWORKING
+  # ===========================================================================
+  meshchat:
+    image: ghcr.io/liamcottle/reticulum-meshchat:latest
+    container_name: meshchat
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/meshchat:/config
+    ports:
+      - "8000:8000"
+    # Uncomment for LoRa/RNode hardware support:
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+
+  # ===========================================================================
   # DASHBOARD
   # ===========================================================================
   dashboard:

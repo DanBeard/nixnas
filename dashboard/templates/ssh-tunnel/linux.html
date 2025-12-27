@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Linux SSH Tunnel Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/ssh-tunnel" class="back-link"><i class="fas fa-arrow-left"></i> Back to SSH Tunnel</a>
+
+    <h1><i class="fab fa-linux"></i> Linux SSH Tunnel Setup</h1>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Quick Tunnel (One-Time)</h3>
+                <p>Open a tunnel to the i2pd web console:</p>
+                <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N</code>
+                <p>Then open <a href="http://127.0.0.1:7070" target="_blank">http://127.0.0.1:7070</a> in your browser.</p>
+                <p><strong>Note:</strong> The <code>-N</code> flag means no remote command - just the tunnel.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Background Tunnel</h3>
+                <p>Run the tunnel in the background:</p>
+                <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N -f</code>
+                <p>The <code>-f</code> flag sends SSH to the background after connecting.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Persistent SSH Config</h3>
+                <p>Add this to <code>~/.ssh/config</code> for easy access:</p>
+                <pre>Host homelab-tunnel
+    HostName {{ ssh_host }}
+    User {{ ssh_user }}
+    LocalForward 7070 127.0.0.1:7070
+    # Add more forwards as needed:
+    # LocalForward 8080 127.0.0.1:8080</pre>
+                <p>Then connect with:</p>
+                <code>ssh homelab-tunnel -N</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Access the Service</h3>
+                <p>While the tunnel is open, access the service at:</p>
+                <ul>
+                    <li><strong>i2pd Console:</strong> <a href="http://127.0.0.1:7070" target="_blank">http://127.0.0.1:7070</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-terminal"></i> Useful Commands</h3>
+        <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N</code>
+        <p>Create tunnel (foreground)</p>
+        <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N -f</code>
+        <p>Create tunnel (background)</p>
+        <code>pkill -f "ssh -L 7070"</code>
+        <p>Kill background tunnel</p>
+        <code>ss -tlnp | grep 7070</code>
+        <p>Check if tunnel is running</p>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-layer-group"></i> Multiple Tunnels</h3>
+        <p>Forward multiple ports in one command:</p>
+        <code>ssh -L 7070:127.0.0.1:7070 -L 4444:127.0.0.1:4444 {{ ssh_user }}@{{ ssh_host }} -N</code>
+        <p>This creates tunnels for both i2pd console (7070) and HTTP proxy (4444).</p>
+    </div>
+</section>
+{% endblock %}

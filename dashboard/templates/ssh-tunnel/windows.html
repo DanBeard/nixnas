@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Windows SSH Tunnel Setup - Homelab{% endblock %}
+
+{% block content %}
+<section class="wireguard-section">
+    <a href="/ssh-tunnel" class="back-link"><i class="fas fa-arrow-left"></i> Back to SSH Tunnel</a>
+
+    <h1><i class="fab fa-windows"></i> Windows SSH Tunnel Setup</h1>
+
+    <h2>Option 1: Windows Terminal / PowerShell</h2>
+    <p class="intro">Windows 10/11 includes OpenSSH by default.</p>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Open PowerShell or Windows Terminal</h3>
+                <p>Press <code>Win + X</code> and select "Windows Terminal" or "PowerShell".</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Create the Tunnel</h3>
+                <p>Run this command:</p>
+                <code>ssh -L 7070:127.0.0.1:7070 {{ ssh_user }}@{{ ssh_host }} -N</code>
+                <p>Keep this window open while using the tunnel.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Access the Service</h3>
+                <p>Open your browser and go to:</p>
+                <p><a href="http://127.0.0.1:7070" target="_blank">http://127.0.0.1:7070</a></p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Close the Tunnel</h3>
+                <p>Press <code>Ctrl + C</code> in the terminal to close the tunnel.</p>
+            </div>
+        </div>
+    </div>
+
+    <h2>Option 2: PuTTY</h2>
+    <p class="intro">For a graphical interface, use PuTTY.</p>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Download PuTTY</h3>
+                <p>Get it from <a href="https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html" target="_blank">the official PuTTY website</a>.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Configure the Session</h3>
+                <p>In PuTTY:</p>
+                <ul>
+                    <li>Host Name: <code>{{ ssh_host }}</code></li>
+                    <li>Port: <code>22</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Configure the Tunnel</h3>
+                <p>Navigate to <strong>Connection > SSH > Tunnels</strong>:</p>
+                <ul>
+                    <li>Source port: <code>7070</code></li>
+                    <li>Destination: <code>127.0.0.1:7070</code></li>
+                    <li>Click <strong>Add</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Save and Connect</h3>
+                <p>Go back to <strong>Session</strong>, save the session as "Homelab Tunnel", then click <strong>Open</strong>.</p>
+                <p>Log in with your username: <code>{{ ssh_user }}</code></p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>Access the Service</h3>
+                <p>Open your browser and go to:</p>
+                <p><a href="http://127.0.0.1:7070" target="_blank">http://127.0.0.1:7070</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3><i class="fas fa-info-circle"></i> SSH Not Found?</h3>
+        <p>If <code>ssh</code> isn't recognized in PowerShell, enable OpenSSH:</p>
+        <ol>
+            <li>Open Settings > Apps > Optional Features</li>
+            <li>Click "Add a feature"</li>
+            <li>Search for "OpenSSH Client" and install it</li>
+        </ol>
+    </div>
+</section>
+{% endblock %}
