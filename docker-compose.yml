@@ -187,6 +187,27 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
 
   # ===========================================================================
+  # DYNAMIC DNS (Porkbun)
+  # ===========================================================================
+  porkbun-ddns:
+    image: python:3.12-alpine
+    container_name: porkbun-ddns
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir requests &&
+             python ddns.py"
+    environment:
+      - TZ=${TZ}
+      - PORKBUN_API_KEY=${PORKBUN_API_KEY}
+      - PORKBUN_SECRET_KEY=${PORKBUN_SECRET_KEY}
+      - PORKBUN_DOMAIN=${PORKBUN_DOMAIN}
+      - PORKBUN_SUBDOMAIN=${PORKBUN_SUBDOMAIN:-@}
+      - DDNS_INTERVAL=${DDNS_INTERVAL:-300}
+    volumes:
+      - ./scripts/ddns.py:/app/ddns.py:ro
+
+  # ===========================================================================
   # DASHBOARD
   # ===========================================================================
   dashboard:
