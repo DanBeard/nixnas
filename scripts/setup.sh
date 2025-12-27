@@ -42,8 +42,10 @@ if [ ! -f "$HOMELAB_DIR/.env" ]; then
     exit 1
 fi
 
-# Load environment variables
+# Load environment variables (set -a exports them automatically)
+set -a
 source "$HOMELAB_DIR/.env"
+set +a
 
 # Verify NAS_IP is set
 if [ -z "${NAS_IP:-}" ] || [ "$NAS_IP" = "192.168.1.100" ]; then
