@@ -238,7 +238,8 @@ services:
     environment:
       - TZ=${TZ}
     volumes:
-      - ./config/i2pd:/home/i2pd/data
+      - i2pd_data:/home/i2pd/data
+      - ./config/i2pd/i2pd.conf:/home/i2pd/data/i2pd.conf:ro
     ports:
       - "127.0.0.1:7070:7070"   # Web console (localhost only)
       - "4444:4444"             # HTTP proxy
@@ -295,3 +296,4 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  i2pd_data:
