@@ -105,7 +105,7 @@ in
           currency = "USD";
 
           # Local access only
-          internal_url = "http://nixnas.local:${toString cfg.httpPort}";
+          internal_url = "http://${config.networking.hostName}.local:${toString cfg.httpPort}";
         };
 
         # HTTP settings

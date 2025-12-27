@@ -1,11 +1,12 @@
 # Storage Module
-# ZFS pool and dataset configuration
+# ZFS, NFS server, and NFS client configuration
 
 { config, pkgs, lib, ... }:
 
 {
   imports = [
     ./zfs.nix
-    ./nfs.nix
+    ./nfs.nix        # NFS server (for storage-node)
+    ./nfs-client.nix # NFS client (for homelab mounting remote storage)
   ];
 }
