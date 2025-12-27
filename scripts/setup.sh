@@ -139,15 +139,29 @@ echo -e "${GREEN}Step 5: Configuring NFS mount...${NC}"
 # Backup fstab
 cp /etc/fstab /etc/fstab.backup
 
-# Check if mount already exists
-if grep -q "/mnt/nas" /etc/fstab; then
+# Clean up old individual NFS mounts (from previous setup versions)
+echo "Cleaning up any old NFS entries..."
+sed -i '/\/mnt\/nas\/media/d' /etc/fstab
+sed -i '/\/mnt\/nas\/downloads/d' /etc/fstab
+sed -i '/\/mnt\/nas\/documents/d' /etc/fstab
+sed -i '/\/mnt\/nas\/backups/d' /etc/fstab
+sed -i '/\/mnt\/nas\/nextcloud/d' /etc/fstab
+sed -i '/\/mnt\/nas\/syncthing/d' /etc/fstab
+# Also clean up old /srv/homelab entries
+sed -i '/\/srv\/homelab.*\/mnt\/nas/d' /etc/fstab
+
+# Check if correct mount already exists
+if grep -q "${NAS_IP}:/homelab[[:space:]]*/mnt/nas" /etc/fstab; then
     echo -e "  ${YELLOW}⚠${NC} NFS mount already in fstab, skipping"
 else
+    # Remove any old /mnt/nas entries before adding new one
+    sed -i '/^[^#].*[[:space:]]\/mnt\/nas[[:space:]]/d' /etc/fstab
+
     cat >> /etc/fstab << EOF
 
 # NAS NFS Mount (added by homelab setup)
 # Single share - subdirectories created after mounting
-${NAS_IP}:/srv/homelab  /mnt/nas  nfs  defaults,_netdev,soft,timeo=100  0 0
+${NAS_IP}:/homelab  /mnt/nas  nfs  defaults,_netdev,soft,timeo=100  0 0
 EOF
     echo -e "  ${GREEN}✓${NC} NFS mount added to /etc/fstab"
 fi

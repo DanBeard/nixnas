@@ -112,16 +112,16 @@ GRAFANA_ADMIN_PASS=...
 The setup script mounts a single NFS share and creates subdirectories:
 
 ```
-NAS:/srv/homelab  →  /mnt/nas/
-                      ├── media/
-                      ├── downloads/
-                      ├── documents/
-                      ├── backups/
-                      ├── nextcloud/
-                      └── syncthing/
+NAS:/homelab  →  /mnt/nas/
+                  ├── media/
+                  ├── downloads/
+                  ├── documents/
+                  ├── backups/
+                  ├── nextcloud/
+                  └── syncthing/
 ```
 
-On your OMV NAS, create one shared folder (`/srv/homelab`) and export it via NFS.
+On your OMV NAS, create one shared folder named `homelab` and export it via NFS.
 
 ### Directory Structure
 
@@ -267,7 +267,6 @@ On your OpenMediaVault NAS:
 
 1. **Create a shared folder** (Storage → Shared Folders):
    - Name: `homelab`
-   - Path will be `/srv/homelab`
 
 2. **Enable NFS** (Services → NFS → Settings → Enable)
 
